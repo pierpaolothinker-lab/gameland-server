@@ -1,0 +1,8 @@
+node_modules/
+coverage/
+.vscode/
+team-extension.log
+dist/
+JS/config/keys.js
+shared/config/keys.ts
+ssl/
