@@ -6,3 +6,4 @@ dist/
 JS/config/keys.js
 shared/config/keys.ts
 ssl/
+.env*

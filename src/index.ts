@@ -1,1 +1,1 @@
-console.log('hello typescript!')
+console.log('Hello Node!')
