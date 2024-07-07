@@ -30,12 +30,12 @@ class App {
     }
 
     private connectToMongoDb(): void {
-        mongoose.Promise = Promise
-        mongoose.connect(process.env.MONGO_URL)
-            .then(() => console.log("Connectd to Mongo DB"))
-        mongoose.connection.on('error', (error: Error) => {
-            console.log(error)
-        })
+        // mongoose.Promise = Promise
+        // mongoose.connect(process.env.MONGO_URL)
+        //     .then(() => console.log("Connected to Mongo DB"))
+        // mongoose.connection.on('error', (error: Error) => {
+        //     console.log(error)
+        // })
     }
 }
 
