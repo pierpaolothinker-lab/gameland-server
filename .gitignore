@@ -2,7 +2,7 @@ node_modules/
 coverage/
 .vscode/
 team-extension.log
-dist/
+dis/
 JS/config/keys.js
 shared/config/keys.ts
 ssl/
