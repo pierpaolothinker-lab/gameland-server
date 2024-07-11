@@ -5,8 +5,10 @@
   "scripts": {
     "start": "nodemon",
     "build": "tsc",
-    "test": "jest --coverage",
-    "test:watch": "jest --watch"
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "test:verbose": "jest --verbose"
   },
   "keywords": [
     "game",
