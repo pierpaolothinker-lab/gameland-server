@@ -1,6 +1,10 @@
-export const getRandomInteger = (min: number, max: number) => {
-    min = Math.ceil(min)
-    max = Math.floor(max)
+export const getRandomInteger = (min: number, max: number): number => {
+    if (min > max) {
+        throw new Error('min should not be greater than max');
+    }
 
-    return Math.floor(Math.random() * (max - min)) + min
-}
+    min = Math.ceil(min);
+    max = Math.floor(max);
+
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+};
