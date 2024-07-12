@@ -1,16 +1,11 @@
-import { CardIT, Suit } from "./cardIT.model"
+import { CardIT, Suit } from "../../cards/cardIT.model"
 
 export class Card3s7 extends CardIT {
-    private score: number = 0
-    private sovranity: number = 0
+    private readonly score: number = 0
+    private readonly sovranity: number = 0
 
-    /**
-     *
-     */
     constructor(suit: Suit, value: number) {
         super(suit, value);
-        if (value < 1 || value > 10 )
-            throw new Error('No valid value for the card')
 
         switch (value) {
             case 1:
@@ -37,8 +32,6 @@ export class Card3s7 extends CardIT {
                 this.sovranity = value -3
                 this.score = 1
             break
-            default:
-                break;
         }
     }
 
