@@ -24,14 +24,15 @@ export class Card3s7 extends CardIT {
             case 5:
             case 6:
             case 7:
+                this.score = 0
                 this.sovranity = value - 3
                 break;
             case 8:
             case 9:
             case 10:
-                this.sovranity = value -3
                 this.score = 1
-            break
+                this.sovranity = value - 3
+                break
         }
     }
 
