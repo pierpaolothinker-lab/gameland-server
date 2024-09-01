@@ -90,6 +90,17 @@ export class DeckIT {
         this._isNew = false
     }
 
+    public italianShuffle(): void {
+        // const max = getRandomInteger(2,5)
+        // for (let index = 0; index < max; index++) {
+        //     this.shuffleFY
+        //     this.shuffleRG
+        // }
+        this.shuffleFY()
+        this.shuffleRG()
+        this.split()
+    }
+
     public getCardsSlice(startIndex: number, endIndex: number): ICardIT[] {
         if (startIndex < 0 || endIndex >= this._cards.length || startIndex > endIndex) {
             throw new Error('Invalid indices')
@@ -105,7 +116,7 @@ export class DeckIT {
         const index = getRandomInteger(min, max)
         this._isNew = false
         this._cards = this.getCardsSlice(index, this._cards.length - 1)
-            .concat(this.getCardsSlice(0, index))
+            .concat(this.getCardsSlice(0, index-1))
         return this._cards
     }
 
