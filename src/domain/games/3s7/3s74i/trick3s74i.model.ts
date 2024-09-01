@@ -10,6 +10,7 @@ export type Play3s7 = {
 export class Trick3s4i {
     private plays: Play3s7[] = []
     private isComplete = false
+    private winner: Play3s7
 
     constructor() { }
 
@@ -23,14 +24,30 @@ export class Trick3s4i {
             this.isComplete = true
     }
 
-    selectWinningPlayer(): Player {
+    setWinner() {
         if (!this.isComplete) {
             throw new Error('Cannot select winning player. The play is not complete')
         }
         const masterSuit = this.plays[0].card.suit
         const possibileWinners = this.plays
             .filter(x => x.card.suit == masterSuit)
-            .sort((a,b) => b.card.getCardSovranity() - a.card.getCardSovranity())
-        return possibileWinners[0].player
+            .sort((a, b) => b.card.getCardSovranity() - a.card.getCardSovranity())
+        // return possibileWinners[0].player
+        this.winner = possibileWinners[0]
+    }
+
+    getWinner(): Player {
+        return this.winner.player
+    }
+
+    getTotalScore(): number {
+        // console.log('-----------SCORE---------',this.plays)
+        const test =  this.plays
+            .map(x => x.card.getCardScore())
+            .reduce((a, b) => a + b)
+
+        // console.log('winner', this.winner.player.username)
+        // console.log('calc', test)
+        return test
     }
 }
