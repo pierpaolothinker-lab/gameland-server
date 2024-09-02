@@ -1,3 +1,4 @@
+import { ICardIT } from "domain/cards/cardIT.model";
 import { Play } from "../../../play.type";
 import { Player } from "../../../player.model";
 import { Card3s7 } from "../card3s7.model";
@@ -49,5 +50,9 @@ export class Trick3s4i {
         // console.log('winner', this.winner.player.username)
         // console.log('calc', test)
         return test
+    }
+
+    getCards(): ICardIT[] {
+        return this.plays.map(x => x.card)
     }
 }

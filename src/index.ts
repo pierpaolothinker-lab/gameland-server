@@ -9,10 +9,9 @@ const deck = new DeckIT()
 
 const mainPlayer = new Player('Pierpaolo')
 
-const table = new Table3s74i(mainPlayer, deck, {})
-
-table.join(new Player('Tonino'), Position3s74i.Est)
+const table = new Table3s74i(mainPlayer, deck, { finalPoins: 31 })
 table.join(new Player('Vito'), Position3s74i.Nord)
+table.join(new Player('Tonino'), Position3s74i.Est)
 table.join(new Player('Paolo'), Position3s74i.Ovest)
 
 table.startGame(mainPlayer)

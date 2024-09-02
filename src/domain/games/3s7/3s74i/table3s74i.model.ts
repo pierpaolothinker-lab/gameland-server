@@ -22,6 +22,16 @@ export type Table3s74iSettings = {
     //     min: number,
     //     max: number
     // }
+    finalPoins: 21 | 31 | 41
+}
+
+type tablePoints = {
+    teamSN: number,
+    teamEO: number,
+    games?: {
+        teamSN: number,
+        teamEO: number
+    }
 }
 
 export class Table3s74i {
@@ -31,8 +41,9 @@ export class Table3s74i {
     deck: DeckIT
     owner: Player
     isComplete: boolean = false
-    handIndex: number = 0
-    tricks: Trick3s4i[] = []
+    handOpenerIndex: number = 0
+    tricks: Trick3s4i[][][]
+    points: tablePoints = { teamEO: 0, teamSN: 0 }
 
     constructor(player: Player, deck: DeckIT, settings: Table3s74iSettings) {
         this.deck = deck
@@ -80,48 +91,93 @@ export class Table3s74i {
         if (player.username !== this.owner.username) {
             throw new Error('Only owner can start a game')
         }
-        this.handIndex = getRandomInteger(0, 3)
-        this.startMatch()
+        this.tricks = []
+        this.handOpenerIndex = getRandomInteger(0, 3)
+        this.startSet(0) //indice deve essere dinamico
     }
 
-    startMatch(): void {
-        this.startHand()
+    startSet(setIndex: number): void {
+        if (setIndex < 0)
+            throw new Error("Invalid Set Index")
+
+        this.tricks[setIndex] = []
+
+        let handIndex = 0
+        while (!this.isSetEnded()) {
+            if (handIndex > 0)
+                this.collectCardsFromTricks(this.tricks[setIndex][handIndex - 1])
+            this.startHand(setIndex, handIndex)
+            handIndex++
+        }
     }
 
-    startHand(): void {
+    isSetEnded(): boolean {
+        return (
+            this.points.teamEO >= this.settings.finalPoins ||
+            this.points.teamSN >= this.settings.finalPoins)
+            &&
+            this.points.teamEO !== this.points.teamSN
+    }
+
+    collectCardsFromTricks(tricks: Trick3s4i[]): void {
+        if (!tricks || tricks.length <= 0)
+            return
+
+        tricks.forEach(trick => {
+            trick.getCards().forEach(card => this.deck.add(card))
+        })
+    }
+
+    startHand(setIndex: number, handIndex: number): void {
+        if (setIndex < 0)
+            throw new Error("Invalid Set Index")
+
+        if (handIndex < 0)
+            throw new Error("Invalid Hand Index")
+
         this.deck.italianShuffle()
         this.distribuiteCards()
-        console.dir(this.players, { depth: null })
-        let trickIndex = this.handIndex
-        for (let index = 0; index < 10; index++) {
-            console.log(`-----------trick ${index + 1}--------------`)
-            const winner = this.playTrick(trickIndex)
-            console.log(`@@@ Raccoglie ${winner.username} @@@`)
-            trickIndex = this.players.findIndex(x => x.username === winner.username)
-        }
-        this.calculatePoints()
+        this.playHand(setIndex, handIndex)
+        this.handOpenerIndex = (this.handOpenerIndex + 1) % 4
+        this.calculatePoints(setIndex, handIndex)
     }
 
-    playTrick(index: number): Player {
+    playHand(setIndex: number, handIndex: number): void {
+        // console.dir(this.players, { depth: null })
+
+        this.tricks[setIndex][handIndex] = []
+
+        let openerIndex = this.handOpenerIndex
+
+        for (let index = 0; index < 10; index++) {
+            console.log(`-----------trick ${index + 1}--------------`)
+            const winner = this.playTrick(openerIndex, setIndex, handIndex)
+            console.log(`@@@ Raccoglie ${winner.username} @@@`)
+            openerIndex = this.players.findIndex(x => x.username === winner.username)
+        }
+    }
+
+    playTrick(openerIndex: number, setIndex: number, handIndex: number): Player {
         const trick = new Trick3s4i()
         let card: Card3s7
 
         for (let i = 0; i < 4; i++) {
-            const player = this.players[index]
+            const player = this.players[openerIndex]
             card = i == 0 ? player.playCardRandom() : player.respondToCardRandom(card)
             const play: Play = { player, card }
             trick.addPlay(play)
-            index = (index + 1) % 4
+            openerIndex = (openerIndex + 1) % 4
             console.log(player.username)
-            console.dir(card, { depth: null })
+            // console.dir(card, { depth: null })
         }
+
         trick.setWinner()
-        this.tricks.push(trick)
+        this.tricks[setIndex][handIndex].push(trick)
         return trick.getWinner()
     }
 
     distribuiteCards(): void {
-        let distrIndex = this.handIndex
+        let distrIndex = this.handOpenerIndex
         while (this.deck.getCount() > 0) {
             for (let index = 0; index < 5; index++) {
                 const card = this.deck.remove(0)
@@ -131,14 +187,15 @@ export class Table3s74i {
         }
     }
 
-    calculatePoints() {
-        // console.log(this.players)
+    calculatePoints(setIndex: number, handIndex: number) {
+        //FIXME: le mani devono essere separati o per lo meno calcolati in modo separato
+
         let teamNS: number = 0
         let teamEO: number = 0
         // let teamNSString: string = ""
         // let teamEOString: string = ""
         let index = 0
-        this.tricks.forEach(trick => {
+        this.tricks[setIndex][handIndex].forEach(trick => {
             index++
             const winner = this.players.find(x => x.username === trick.getWinner().username)
             // console.log("position",winner.position)
@@ -155,9 +212,12 @@ export class Table3s74i {
             }
 
         });
-        console.log("La squadra SN: ", Math.floor(teamNS / 3))
+        this.points.teamSN += Math.floor(teamNS / 3)
+        console.log("La squadra SN: ", this.points.teamSN)
         // console.log("La squadra SN: ", teamNSString)
-        console.log("La squadra EO: ", Math.floor(teamEO / 3))
+
+        this.points.teamEO += Math.floor(teamEO / 3)
+        console.log("La squadra EO: ", this.points.teamEO)
         // console.log("La squadra EO: ", teamEOString)
     }
 }
