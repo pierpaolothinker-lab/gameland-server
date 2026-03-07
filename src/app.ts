@@ -1,8 +1,9 @@
-import express from 'express';
+﻿import express from 'express';
 import bodyParse from 'body-parser';
 import cors from 'cors';
 import mongoose from 'mongoose';
 import 'dotenv/config';
+import { tressetteRouter } from './tressette/tressette.routes';
 
 class App {
     public express: express.Application
@@ -10,9 +11,11 @@ class App {
     constructor() {
         this.express = express()
 
-        this.connectToMongoDb()
         this.setBodyParserMiddlewares()
         this.handleCORSErrors()
+        this.registerHealthRoute()
+        this.registerRoutes()
+        this.connectToMongoDb()
     }
 
     private setBodyParserMiddlewares(): void {
@@ -30,12 +33,28 @@ class App {
     }
 
     private connectToMongoDb(): void {
-        // mongoose.Promise = Promise
-        // mongoose.connect(process.env.MONGO_URL)
-        //     .then(() => console.log("Connected to Mongo DB"))
-        // mongoose.connection.on('error', (error: Error) => {
-        //     console.log(error)
-        // })
+        const mongoUrl = process.env.MONGO_URL
+        if (!mongoUrl) {
+            console.warn('MONGO_URL is not set. Starting without MongoDB connection.')
+            return
+        }
+
+        mongoose
+            .connect(mongoUrl)
+            .then(() => console.log('Connected to Mongo DB'))
+            .catch((error: Error) => {
+                console.error('MongoDB connection error', error)
+            })
+    }
+
+    private registerHealthRoute(): void {
+        this.express.get('/health', (_req: express.Request, res: express.Response) => {
+            res.status(200).json({ status: 'ok' })
+        })
+    }
+
+    private registerRoutes(): void {
+        this.express.use('/api/tressette', tressetteRouter)
     }
 }
 

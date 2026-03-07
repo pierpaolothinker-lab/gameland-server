@@ -38,6 +38,39 @@ This baseline is effective for all implementation threads until explicitly chang
 { "status": "ok" }
 ```
 
+
+### Tressette - Create table
+- Method: `POST`
+- Path: `/api/tressette/tables`
+- Request body:
+
+```json
+{ "owner": "PlayerName" }
+```
+
+- Response `201`:
+
+```json
+{
+  "tableId": "uuid",
+  "owner": "PlayerName",
+  "players": [{ "username": "PlayerName", "position": "SUD" }],
+  "isComplete": false,
+  "points": { "teamSN": 0, "teamEO": 0 },
+  "status": "waiting"
+}
+```
+
+- Response `400` (validation error):
+
+```json
+{
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "owner is required"
+  }
+}
+```
 ## WebSocket (Socket.IO) (current)
 Connection is initialized on backend server startup.
 
@@ -56,8 +89,8 @@ Connection is initialized on backend server startup.
   - Payload: `name` string
   - Behavior: server broadcasts to other clients
 
-## Tressette MVP Contract (planned)
-Status: `PLANNED` (not fully implemented as API yet)
+## Tressette MVP Contract (partial)
+Status: `PARTIALLY_IMPLEMENTED` (`POST /api/tressette/tables` implemented; remaining endpoints/events planned)
 
 ### Table model (logical)
 - `tableId: string`
@@ -113,4 +146,6 @@ When backend changes any endpoint/payload/event:
 1. Update this file in the same PR/commit.
 2. Add a short "Contract changes" section in commit/PR notes.
 3. Notify frontend thread with exact changed paths and examples.
+
+
 

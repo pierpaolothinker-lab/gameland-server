@@ -1,14 +1,16 @@
-{
-    "compilerOptions": {
-        "module": "NodeNext",
-        "moduleResolution": "NodeNext",
-        "baseUrl": "src",
-        "outDir": "dis",
-        "sourceMap": true,
-        "noImplicitAny": true
-    },
-    "include": [
-        "src/**/*",
-        "tests/**/*"
-    ]
+﻿{
+    "compilerOptions":  {
+                            "module":  "NodeNext",
+                            "moduleResolution":  "NodeNext",
+                            "baseUrl":  "src",
+                            "outDir":  "dis",
+                            "sourceMap":  true,
+                            "noImplicitAny":  true,
+                            "esModuleInterop":  true,
+                            "allowSyntheticDefaultImports":  true
+                        },
+    "include":  [
+                    "src/**/*",
+                    "tests/**/*"
+                ]
 }
