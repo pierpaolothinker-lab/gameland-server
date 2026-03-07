@@ -14,7 +14,6 @@ Use this file as the single reference when backend/frontend are developed in sep
 - Backend local base URL: `http://localhost:3500`
 - Frontend local URL: `http://localhost:4200`
 
-
 ## Runtime Baseline (Task 1)
 This baseline is effective for all implementation threads until explicitly changed.
 
@@ -27,6 +26,7 @@ This baseline is effective for all implementation threads until explicitly chang
 - `gameland-app` environment currently points to port `3000`.
 - `gameland-app` currently uses `/api/tressette/table` (singular).
 - `gameland-app` uses native `WebSocket`, while backend realtime is `Socket.IO`.
+
 ## HTTP API (current)
 
 ### Health
@@ -37,7 +37,6 @@ This baseline is effective for all implementation threads until explicitly chang
 ```json
 { "status": "ok" }
 ```
-
 
 ### Tressette - Create table
 - Method: `POST`
@@ -61,16 +60,44 @@ This baseline is effective for all implementation threads until explicitly chang
 }
 ```
 
-- Response `400` (validation error):
+### Tressette - Join table
+- Method: `POST`
+- Path: `/api/tressette/tables/:tableId/join`
+- Request body:
 
 ```json
-{
-  "error": {
-    "code": "VALIDATION_ERROR",
-    "message": "owner is required"
-  }
-}
+{ "username": "PlayerName", "position": "NORD" }
 ```
+
+- Response `200`: table snapshot updated.
+
+### Tressette - Leave table
+- Method: `POST`
+- Path: `/api/tressette/tables/:tableId/leave`
+- Request body:
+
+```json
+{ "username": "PlayerName" }
+```
+
+- Response `200`: table snapshot updated.
+
+### Tressette - Start game
+- Method: `POST`
+- Path: `/api/tressette/tables/:tableId/start`
+- Request body:
+
+```json
+{ "username": "OwnerName" }
+```
+
+- Response `200`: table snapshot with `status: "in_game"`.
+
+### Tressette - Get table
+- Method: `GET`
+- Path: `/api/tressette/tables/:tableId`
+- Response `200`: table snapshot.
+
 ## WebSocket (Socket.IO) (current)
 Connection is initialized on backend server startup.
 
@@ -90,7 +117,7 @@ Connection is initialized on backend server startup.
   - Behavior: server broadcasts to other clients
 
 ## Tressette MVP Contract (partial)
-Status: `PARTIALLY_IMPLEMENTED` (`POST /api/tressette/tables` implemented; remaining endpoints/events planned)
+Status: `PARTIALLY_IMPLEMENTED` (HTTP endpoints for create/join/leave/start/get are implemented; socket events still planned)
 
 ### Table model (logical)
 - `tableId: string`
@@ -99,18 +126,6 @@ Status: `PARTIALLY_IMPLEMENTED` (`POST /api/tressette/tables` implemented; remai
 - `isComplete: boolean`
 - `points: { teamSN: number, teamEO: number }`
 - `status: "waiting" | "in_game" | "ended"`
-
-### Planned HTTP endpoints
-- `POST /api/tressette/tables`
-  - Create a table
-- `POST /api/tressette/tables/:tableId/join`
-  - Join a position
-- `POST /api/tressette/tables/:tableId/leave`
-  - Leave table
-- `POST /api/tressette/tables/:tableId/start`
-  - Start game (owner only)
-- `GET /api/tressette/tables/:tableId`
-  - Get table snapshot
 
 ### Planned socket events
 - Client -> server
@@ -141,11 +156,22 @@ Status: `PARTIALLY_IMPLEMENTED` (`POST /api/tressette/tables` implemented; remai
 }
 ```
 
+### Current HTTP error codes used by Tressette endpoints
+- `VALIDATION_ERROR` -> invalid/missing request fields (`400`)
+- `TABLE_NOT_FOUND` -> table does not exist (`404`)
+- `TABLE_FULL` -> all positions already occupied (`409`)
+- `POSITION_NOT_AVAILABLE` -> requested seat already occupied (`409`)
+- `PLAYER_ALREADY_JOINED` -> username already in table (`409`)
+- `PLAYER_NOT_FOUND` -> leave request for non-existent player (`404`)
+- `OWNER_CANNOT_LEAVE` -> owner cannot leave table (`409`)
+- `FORBIDDEN_START` -> non-owner trying to start (`403`)
+- `TABLE_NOT_COMPLETE` -> start with < 4 players (`409`)
+- `TABLE_ALREADY_STARTED` -> start requested after game start (`409`)
+- `TABLE_NOT_JOINABLE` -> join after game start (`409`)
+- `TABLE_NOT_LEAVABLE` -> leave after game start (`409`)
+
 ## Change policy
 When backend changes any endpoint/payload/event:
 1. Update this file in the same PR/commit.
 2. Add a short "Contract changes" section in commit/PR notes.
 3. Notify frontend thread with exact changed paths and examples.
-
-
-
