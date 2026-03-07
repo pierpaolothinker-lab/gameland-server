@@ -117,7 +117,7 @@ Connection is initialized on backend server startup.
   - Behavior: server broadcasts to other clients
 
 ## Tressette MVP Contract (partial)
-Status: `PARTIALLY_IMPLEMENTED` (HTTP endpoints for create/join/leave/start/get are implemented; socket events still planned)
+Status: `PARTIALLY_IMPLEMENTED` (HTTP endpoints create/join/leave/start/get and Socket.IO table events are implemented; gameplay events remain partial)
 
 ### Table model (logical)
 - `tableId: string`
@@ -127,19 +127,21 @@ Status: `PARTIALLY_IMPLEMENTED` (HTTP endpoints for create/join/leave/start/get 
 - `points: { teamSN: number, teamEO: number }`
 - `status: "waiting" | "in_game" | "ended"`
 
-### Planned socket events
-- Client -> server
-  - `tressette:join-table`
-  - `tressette:leave-table`
-  - `tressette:start-game`
-  - `tressette:play-card`
-- Server -> client
-  - `tressette:table-updated`
-  - `tressette:hand-started`
-  - `tressette:trick-ended`
-  - `tressette:game-ended`
-  - `tressette:error`
 
+### Tressette Socket.IO events (current)
+Client -> server:
+- `tressette:join-table` payload `{ tableId, username, position }`
+- `tressette:leave-table` payload `{ tableId, username }`
+- `tressette:start-game` payload `{ tableId, username }`
+- `tressette:play-card` payload `{ tableId, ... }` (accepted but gameplay flow not implemented)
+
+Server -> client:
+- `tressette:table-updated` emitted to room `tressette:table:{tableId}` on join/leave/start
+- `tressette:hand-started` emitted on successful start-game
+- `tressette:error` emitted with contract error payload on validation/domain failures
+
+Current limitation:
+- `tressette:play-card` currently responds with `NOT_IMPLEMENTED` via `tressette:error`.
 ## Data conventions
 - Content type: `application/json`
 - IDs: strings
@@ -175,3 +177,5 @@ When backend changes any endpoint/payload/event:
 1. Update this file in the same PR/commit.
 2. Add a short "Contract changes" section in commit/PR notes.
 3. Notify frontend thread with exact changed paths and examples.
+
+
