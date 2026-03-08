@@ -1,6 +1,6 @@
-﻿# Gameland API Contract
+# Gameland API Contract
 
-Last updated: 2026-03-07
+Last updated: 2026-03-08
 Source of truth: backend (`gameland-server`)
 
 ## Purpose
@@ -59,6 +59,29 @@ This baseline is effective for all implementation threads until explicitly chang
   "status": "waiting"
 }
 ```
+
+### Tressette - List tables
+- Method: `GET`
+- Path: `/api/tressette/tables`
+- Response `200`:
+
+```json
+[
+  {
+    "tableId": "uuid",
+    "owner": "PlayerName",
+    "players": [{ "username": "PlayerName", "position": "SUD" }],
+    "isComplete": false,
+    "points": { "teamSN": 0, "teamEO": 0 },
+    "status": "waiting"
+  }
+]
+```
+
+Notes:
+- Returns `[]` when there are no tables.
+- Recommended order: `waiting`, then `in_game`, then `ended`.
+- No domain error codes are currently expected for this endpoint.
 
 ### Tressette - Join table
 - Method: `POST`
@@ -177,5 +200,7 @@ When backend changes any endpoint/payload/event:
 1. Update this file in the same PR/commit.
 2. Add a short "Contract changes" section in commit/PR notes.
 3. Notify frontend thread with exact changed paths and examples.
+
+
 
 

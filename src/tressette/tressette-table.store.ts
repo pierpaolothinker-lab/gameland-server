@@ -1,10 +1,11 @@
-﻿import { randomUUID } from 'crypto'
+import { randomUUID } from 'crypto'
 import {
     CreateTressetteTableInput,
     JoinTressetteTableInput,
     LeaveTressetteTableInput,
     StartTressetteGameInput,
-    TressetteTable
+    TressetteTable,
+    TressetteTableStatus
 } from './tressette.types'
 
 export class TressetteStoreError extends Error {
@@ -33,6 +34,12 @@ class TressetteTableStore {
 
         this.tables.set(table.tableId, table)
         return this.clone(table)
+    }
+
+    list(): TressetteTable[] {
+        return Array.from(this.tables.values())
+            .sort((a, b) => this.getStatusRank(a.status) - this.getStatusRank(b.status))
+            .map((table) => this.clone(table))
     }
 
     getById(tableId: string): TressetteTable {
@@ -128,6 +135,19 @@ class TressetteTableStore {
             ...table,
             players: table.players.map((player) => ({ ...player })),
             points: { ...table.points }
+        }
+    }
+
+    private getStatusRank(status: TressetteTableStatus): number {
+        switch (status) {
+            case 'waiting':
+                return 0
+            case 'in_game':
+                return 1
+            case 'ended':
+                return 2
+            default:
+                return 3
         }
     }
 }

@@ -1,4 +1,4 @@
-﻿import { AddressInfo } from 'net'
+import { AddressInfo } from 'net'
 import { createServer, Server } from 'http'
 import app from '../../../src/app'
 import { tressetteTableStore } from '../../../src/tressette/tressette-table.store'
@@ -22,6 +22,73 @@ describe('Tressette table HTTP API', () => {
 
     afterAll((done) => {
         server.close(() => done())
+    })
+
+    test('returns created tables list snapshot from API', async () => {
+        const createOne = await fetch(`${baseUrl}/api/tressette/tables`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ owner: 'Pierpaolo' })
+        })
+        const firstTable = await createOne.json()
+
+        await fetch(`${baseUrl}/api/tressette/tables/${firstTable.tableId}/join`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: 'Vito', position: 'NORD' })
+        })
+        await fetch(`${baseUrl}/api/tressette/tables/${firstTable.tableId}/join`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: 'Tonino', position: 'EST' })
+        })
+        await fetch(`${baseUrl}/api/tressette/tables/${firstTable.tableId}/join`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: 'Paolo', position: 'OVEST' })
+        })
+        await fetch(`${baseUrl}/api/tressette/tables/${firstTable.tableId}/start`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: 'Pierpaolo' })
+        })
+
+        const createTwo = await fetch(`${baseUrl}/api/tressette/tables`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ owner: 'Franco' })
+        })
+        const secondTable = await createTwo.json()
+
+        const response = await fetch(`${baseUrl}/api/tressette/tables`)
+        expect(response.status).toBe(200)
+
+        const body = await response.json()
+        expect(Array.isArray(body)).toBe(true)
+        expect(body).toHaveLength(2)
+
+        expect(body[0]).toMatchObject({
+            tableId: secondTable.tableId,
+            owner: 'Franco',
+            status: 'waiting',
+            isComplete: false,
+            points: { teamSN: 0, teamEO: 0 }
+        })
+
+        expect(body[1]).toMatchObject({
+            tableId: firstTable.tableId,
+            owner: 'Pierpaolo',
+            status: 'in_game',
+            isComplete: true,
+            points: { teamSN: 0, teamEO: 0 }
+        })
+    })
+
+    test('returns empty array when table store is reset', async () => {
+        const response = await fetch(`${baseUrl}/api/tressette/tables`)
+
+        expect(response.status).toBe(200)
+        expect(await response.json()).toEqual([])
     })
 
     test('creates a table with owner and defaults', async () => {
