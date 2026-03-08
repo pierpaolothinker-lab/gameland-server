@@ -1,16 +1,18 @@
-﻿import { Request, Response, Router } from 'express'
+import { Request, Response, Router } from 'express'
 import { tressetteTableStore, TressetteStoreError } from './tressette-table.store'
 import { TRESSETTE_POSITIONS, TressettePosition } from './tressette.types'
 
 export const tressetteRouter = Router()
 
+const USERNAME_MAX_LENGTH = 32
+
 tressetteRouter.post('/tables', (req: Request, res: Response) => {
-    const owner = readNonEmptyString(req.body?.owner)
-    if (!owner) {
-        return sendValidationError(res, 'owner is required')
+    const ownerResult = readUsernameInput(req, 'owner')
+    if (ownerResult.error) {
+        return sendValidationError(res, ownerResult.error)
     }
 
-    const table = tressetteTableStore.create({ owner })
+    const table = tressetteTableStore.create({ owner: ownerResult.value as string })
     return res.status(201).json(table)
 })
 
@@ -24,11 +26,11 @@ tressetteRouter.get('/tables/:tableId', (req: Request, res: Response) => {
 })
 
 tressetteRouter.post('/tables/:tableId/join', (req: Request, res: Response) => {
-    const username = readNonEmptyString(req.body?.username)
+    const usernameResult = readUsernameInput(req, 'username')
     const position = readPosition(req.body?.position)
 
-    if (!username) {
-        return sendValidationError(res, 'username is required')
+    if (usernameResult.error) {
+        return sendValidationError(res, usernameResult.error)
     }
 
     if (!position) {
@@ -38,7 +40,7 @@ tressetteRouter.post('/tables/:tableId/join', (req: Request, res: Response) => {
     try {
         const table = tressetteTableStore.join({
             tableId: req.params.tableId,
-            username,
+            username: usernameResult.value as string,
             position
         })
 
@@ -83,6 +85,58 @@ tressetteRouter.post('/tables/:tableId/start', (req: Request, res: Response) => 
         return sendStoreError(res, error)
     }
 })
+
+const readUsernameInput = (
+    req: Request,
+    fieldName: 'owner' | 'username'
+): { value: string | null, error: string | null } => {
+    const mockHeader = req.header('x-mock-username')
+
+    if (isMockUsernameOverrideEnabled() && mockHeader !== undefined) {
+        const headerValidation = validateUsernameValue(mockHeader)
+        if (headerValidation.error) {
+            return {
+                value: null,
+                error: `x-mock-username ${headerValidation.error}`
+            }
+        }
+
+        return { value: headerValidation.value as string, error: null }
+    }
+
+    const bodyValidation = validateUsernameValue(req.body?.[fieldName])
+    if (bodyValidation.error) {
+        return {
+            value: null,
+            error: fieldName === 'owner'
+                ? `owner ${bodyValidation.error}`
+                : `username ${bodyValidation.error}`
+        }
+    }
+
+    return { value: bodyValidation.value as string, error: null }
+}
+
+const validateUsernameValue = (value: unknown): { value: string | null, error: string | null } => {
+    if (typeof value !== 'string') {
+        return { value: null, error: 'is required' }
+    }
+
+    const normalized = value.trim()
+    if (normalized.length === 0) {
+        return { value: null, error: 'is required' }
+    }
+
+    if (normalized.length > USERNAME_MAX_LENGTH) {
+        return { value: null, error: `must be at most ${USERNAME_MAX_LENGTH} characters` }
+    }
+
+    return { value: normalized, error: null }
+}
+
+const isMockUsernameOverrideEnabled = (): boolean => {
+    return process.env.NODE_ENV !== 'production'
+}
 
 const readNonEmptyString = (value: unknown): string | null => {
     if (typeof value !== 'string') {
