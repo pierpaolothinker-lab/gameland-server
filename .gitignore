@@ -7,3 +7,6 @@ JS/config/keys.js
 shared/config/keys.ts
 ssl/
 .env*
+# Project memory runtime artifacts
+backups/
+docs/project-memory/snapshot.json
