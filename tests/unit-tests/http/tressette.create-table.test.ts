@@ -169,4 +169,60 @@ describe('Tressette table HTTP API', () => {
             }
         })
     })
+
+    test('owner cannot leave table', async () => {
+        const createResponse = await fetch(`${baseUrl}/api/tressette/tables`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ owner: 'Pierpaolo' })
+        })
+        const createdTable = await createResponse.json()
+        const tableId = createdTable.tableId
+
+        const response = await fetch(`${baseUrl}/api/tressette/tables/${tableId}/leave`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: 'Pierpaolo' })
+        })
+
+        expect(response.status).toBe(409)
+        const body = await response.json()
+        expect(body.error.code).toBe('OWNER_CANNOT_LEAVE')
+    })
+
+    test('non-owner cannot start game', async () => {
+        const createResponse = await fetch(`${baseUrl}/api/tressette/tables`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ owner: 'Pierpaolo' })
+        })
+        const createdTable = await createResponse.json()
+        const tableId = createdTable.tableId
+
+        await fetch(`${baseUrl}/api/tressette/tables/${tableId}/join`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: 'Vito', position: 'NORD' })
+        })
+        await fetch(`${baseUrl}/api/tressette/tables/${tableId}/join`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: 'Tonino', position: 'EST' })
+        })
+        await fetch(`${baseUrl}/api/tressette/tables/${tableId}/join`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: 'Paolo', position: 'OVEST' })
+        })
+
+        const response = await fetch(`${baseUrl}/api/tressette/tables/${tableId}/start`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: 'Vito' })
+        })
+
+        expect(response.status).toBe(403)
+        const body = await response.json()
+        expect(body.error.code).toBe('FORBIDDEN_START')
+    })
 })
