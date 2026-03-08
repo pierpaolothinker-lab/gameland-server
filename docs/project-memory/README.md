@@ -10,7 +10,11 @@ It stores architecture notes, implementation diary, decisions, fixes, and roadma
 - `decisions.md`: architecture and strategy decisions (ADR-style).
 - `roadmap-status.md`: current roadmap status by phase.
 - `open-questions.md`: unresolved items and assumptions.
-- `OPERATIONS.md`: how to keep this memory updated.`r`n- `../task-prompt-template.md`: template for FE/BE task prompts with mandatory branch evaluation.
+- `HIGH_LEVEL_PLAYBOOK.md`: high-level strategy and governance focus.
+- `TECHNICAL_MANUAL.md`: how to retrieve/update/backup information.
+- `OPERATIONS.md`: how to keep this memory updated.
+- `RENDER_DEPLOYMENT_PLAN.md`: deployment baseline and Render rollout notes.
+- `../task-prompt-template.md`: template for FE/BE task prompts with mandatory branch evaluation.
 
 ## Update Rule
 After every relevant change (task completed, contract changed, release decision):
@@ -22,4 +26,3 @@ After every relevant change (task completed, contract changed, release decision)
 - API contract: `../api-contract.md`
 - Blueprint: `../project-blueprint.md`
 - Execution checklist: `../execution-checklist.md`
-
