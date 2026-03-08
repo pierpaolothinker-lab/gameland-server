@@ -10,7 +10,11 @@ import {
     TressetteTableStatus,
     TressetteTurnState
 } from './tressette.types'
-import { tressetteGameEngineAdapter, TressetteGameEngineError } from './tressette-game-engine.adapter'
+import {
+    tressetteGameEngineAdapter,
+    TressetteGameEngineAdapter,
+    TressetteGameEngineError
+} from './tressette-game-engine.adapter'
 
 export class TressetteStoreError extends Error {
     readonly code: string
@@ -28,8 +32,16 @@ export type TressettePlayCardStoreResult = {
     play: TressettePlayCardOutcome
 }
 
-class TressetteTableStore {
+export class TressetteTableStore {
     private readonly tables = new Map<string, TressetteTable>()
+    private readonly seedTables: TressetteTable[]
+    private readonly engineAdapter: TressetteGameEngineAdapter
+
+    constructor(engineAdapter: TressetteGameEngineAdapter = tressetteGameEngineAdapter, seedTables: TressetteTable[] = []) {
+        this.engineAdapter = engineAdapter
+        this.seedTables = seedTables.map((table) => this.clone(table))
+        this.restoreSeeds()
+    }
 
     create(input: CreateTressetteTableInput): TressetteTable {
         const table: TressetteTable = {
@@ -119,7 +131,7 @@ class TressetteTableStore {
         }
 
         try {
-            tressetteGameEngineAdapter.initialize(this.clone(table))
+            this.engineAdapter.initialize(this.clone(table))
         } catch (error: unknown) {
             if (error instanceof TressetteGameEngineError) {
                 throw new TressetteStoreError(error.code, error.message, error.httpStatus)
@@ -137,7 +149,7 @@ class TressetteTableStore {
             return null
         }
 
-        return tressetteGameEngineAdapter.getCurrentTurn(tableId)
+        return this.engineAdapter.getCurrentTurn(tableId)
     }
 
     playCard(input: PlayCardTressetteInput): TressettePlayCardStoreResult {
@@ -148,7 +160,7 @@ class TressetteTableStore {
         }
 
         try {
-            const play = tressetteGameEngineAdapter.playCard(this.clone(table), {
+            const play = this.engineAdapter.playCard(this.clone(table), {
                 username: input.username,
                 source: input.source,
                 card: input.card
@@ -169,7 +181,14 @@ class TressetteTableStore {
 
     reset(): void {
         this.tables.clear()
-        tressetteGameEngineAdapter.reset()
+        this.engineAdapter.reset()
+        this.restoreSeeds()
+    }
+
+    private restoreSeeds(): void {
+        this.seedTables.forEach((table) => {
+            this.tables.set(table.tableId, this.clone(table))
+        })
     }
 
     private requireTable(tableId: string): TressetteTable {

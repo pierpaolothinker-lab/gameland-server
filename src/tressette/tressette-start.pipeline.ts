@@ -1,8 +1,10 @@
+import { TressetteMode } from './tressette.mode'
 import { TressetteTable, TressetteTableStatus } from './tressette.types'
 
 export type StartPipelineTrigger = 'http' | 'socket'
 
 export type StartPipelineContext = {
+    mode: TressetteMode
     table: TressetteTable
     owner: string
     statusBefore: TressetteTableStatus
