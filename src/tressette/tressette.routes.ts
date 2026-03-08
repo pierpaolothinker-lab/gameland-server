@@ -1,30 +1,47 @@
 import { Request, Response, Router } from 'express'
-import { tressetteTableStore, TressetteStoreError } from './tressette-table.store'
-import { TRESSETTE_POSITIONS, TressettePosition, TressetteTableStatus } from './tressette.types'
 import { dispatchStartPipeline } from './tressette-start.pipeline'
+import { getStoreForMode } from './tressette-mode.store'
+import { resolveModeFromHttp } from './tressette.mode'
+import { TRESSETTE_POSITIONS, TressettePosition, TressetteTableStatus } from './tressette.types'
+import { TressetteStoreError } from './tressette-table.store'
 
 export const tressetteRouter = Router()
 
 const USERNAME_MAX_LENGTH = 32
 
 tressetteRouter.post('/tables', (req: Request, res: Response) => {
+    const modeResolution = resolveModeFromHttp(req)
+    if (!modeResolution.isValid) {
+        return sendValidationError(res, 'mode must be demo or live')
+    }
+
     const ownerResult = readUsernameInput(req, 'owner')
     if (ownerResult.error) {
         return sendValidationError(res, ownerResult.error)
     }
 
-    const table = tressetteTableStore.create({ owner: ownerResult.value as string })
+    const table = getStoreForMode(modeResolution.mode).create({ owner: ownerResult.value as string })
     return res.status(201).json(table)
 })
 
-tressetteRouter.get('/tables', (_req: Request, res: Response) => {
-    const tables = tressetteTableStore.list()
+tressetteRouter.get('/tables', (req: Request, res: Response) => {
+    const modeResolution = resolveModeFromHttp(req)
+    if (!modeResolution.isValid) {
+        return sendValidationError(res, 'mode must be demo or live')
+    }
+
+    const tables = getStoreForMode(modeResolution.mode).list()
     return res.status(200).json(tables)
 })
 
 tressetteRouter.get('/tables/:tableId', (req: Request, res: Response) => {
+    const modeResolution = resolveModeFromHttp(req)
+    if (!modeResolution.isValid) {
+        return sendValidationError(res, 'mode must be demo or live')
+    }
+
     try {
-        const table = tressetteTableStore.getById(req.params.tableId)
+        const table = getStoreForMode(modeResolution.mode).getById(req.params.tableId)
         return res.status(200).json(table)
     } catch (error: unknown) {
         return sendStoreError(res, error)
@@ -32,6 +49,11 @@ tressetteRouter.get('/tables/:tableId', (req: Request, res: Response) => {
 })
 
 tressetteRouter.post('/tables/:tableId/join', (req: Request, res: Response) => {
+    const modeResolution = resolveModeFromHttp(req)
+    if (!modeResolution.isValid) {
+        return sendValidationError(res, 'mode must be demo or live')
+    }
+
     const usernameResult = readUsernameInput(req, 'username')
     const position = readPosition(req.body?.position)
 
@@ -44,7 +66,7 @@ tressetteRouter.post('/tables/:tableId/join', (req: Request, res: Response) => {
     }
 
     try {
-        const table = tressetteTableStore.join({
+        const table = getStoreForMode(modeResolution.mode).join({
             tableId: req.params.tableId,
             username: usernameResult.value as string,
             position
@@ -57,13 +79,18 @@ tressetteRouter.post('/tables/:tableId/join', (req: Request, res: Response) => {
 })
 
 tressetteRouter.post('/tables/:tableId/leave', (req: Request, res: Response) => {
+    const modeResolution = resolveModeFromHttp(req)
+    if (!modeResolution.isValid) {
+        return sendValidationError(res, 'mode must be demo or live')
+    }
+
     const username = readNonEmptyString(req.body?.username)
     if (!username) {
         return sendValidationError(res, 'username is required')
     }
 
     try {
-        const table = tressetteTableStore.leave({
+        const table = getStoreForMode(modeResolution.mode).leave({
             tableId: req.params.tableId,
             username
         })
@@ -75,20 +102,27 @@ tressetteRouter.post('/tables/:tableId/leave', (req: Request, res: Response) => 
 })
 
 tressetteRouter.post('/tables/:tableId/start', (req: Request, res: Response) => {
+    const modeResolution = resolveModeFromHttp(req)
+    if (!modeResolution.isValid) {
+        return sendValidationError(res, 'mode must be demo or live')
+    }
+
     const username = readNonEmptyString(req.body?.username)
     if (!username) {
         return sendValidationError(res, 'username is required')
     }
 
-    const statusBefore = readStatusBeforeStart(req.params.tableId)
+    const store = getStoreForMode(modeResolution.mode)
+    const statusBefore = readStatusBeforeStart(store, req.params.tableId)
 
     try {
-        const table = tressetteTableStore.start({
+        const table = store.start({
             tableId: req.params.tableId,
             username
         })
 
         dispatchStartPipeline({
+            mode: modeResolution.mode,
             table,
             owner: username,
             statusBefore,
@@ -162,9 +196,12 @@ const readNonEmptyString = (value: unknown): string | null => {
     return normalized.length > 0 ? normalized : null
 }
 
-const readStatusBeforeStart = (tableId: string): TressetteTableStatus => {
+const readStatusBeforeStart = (
+    store: { getById: (tableId: string) => { status: TressetteTableStatus } },
+    tableId: string
+): TressetteTableStatus => {
     try {
-        return tressetteTableStore.getById(tableId).status
+        return store.getById(tableId).status
     } catch (_error: unknown) {
         return 'waiting'
     }

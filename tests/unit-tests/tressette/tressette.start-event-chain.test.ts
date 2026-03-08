@@ -5,6 +5,7 @@ import { Server as IoServer } from 'socket.io'
 import app from '../../../src/app'
 import { createIo, TURN_TIMEOUT_SECONDS } from '../../../src/sockets'
 import { tressetteTableStore } from '../../../src/tressette/tressette-table.store'
+import { resetStoresForTests } from '../../../src/tressette/tressette-mode.store'
 import { clearStartPipelineDispatcher } from '../../../src/tressette/tressette-start.pipeline'
 
 describe('Tressette start event chain', () => {
@@ -24,7 +25,7 @@ describe('Tressette start event chain', () => {
     })
 
     beforeEach(() => {
-        tressetteTableStore.reset()
+        resetStoresForTests()
     })
 
     afterAll((done) => {
@@ -57,7 +58,7 @@ describe('Tressette start event chain', () => {
         }) as typeof setInterval)
 
         try {
-            const response = await fetch(`${baseUrl}/api/tressette/tables/${created.tableId}/start`, {
+            const response = await fetch(`${baseUrl}/api/tressette/tables/${created.tableId}/start?mode=live`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ username: 'Pierpaolo' })
@@ -133,7 +134,7 @@ describe('Tressette start event chain', () => {
         }) as typeof setInterval)
 
         try {
-            const response = await fetch(`${baseUrl}/api/tressette/tables/${created.tableId}/start`, {
+            const response = await fetch(`${baseUrl}/api/tressette/tables/${created.tableId}/start?mode=live`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ username: 'Pierpaolo' })
@@ -163,3 +164,4 @@ describe('Tressette start event chain', () => {
         }
     })
 })
+

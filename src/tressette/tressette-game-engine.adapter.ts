@@ -45,7 +45,7 @@ const TURN_ORDER: Position3s74i[] = [
     Position3s74i.Ovest
 ]
 
-class TressetteGameEngineAdapter {
+export class TressetteGameEngineAdapter {
     private readonly sessions = new Map<string, EngineSession>()
 
     initialize(tableSnapshot: TressetteTable): TressetteTurnState {
@@ -276,4 +276,5 @@ class TressetteGameEngineAdapter {
 }
 
 export const tressetteGameEngineAdapter = new TressetteGameEngineAdapter()
+
 

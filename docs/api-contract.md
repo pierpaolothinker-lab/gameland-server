@@ -27,7 +27,7 @@ This baseline is effective for all implementation threads until explicitly chang
 - `gameland-app` currently uses `/api/tressette/table` (singular).
 - `gameland-app` uses native `WebSocket`, while backend realtime is `Socket.IO`.
 
-## HTTP API (current)
+## Mode Semantics`r`n- Supported modes: `demo` | `live`.`r`n- Mode selector precedence:`r`n  1. Query param `mode``r`n  2. Header `x-mode` (or `x-tressette-mode`)`r`n- Default when mode is omitted: `demo`.`r`n- Invalid explicit mode value: `400 VALIDATION_ERROR`.`r`n- Mode is applied as single source of truth for both HTTP and Socket flows.`r`n`r`n## HTTP API (current)
 
 ### Health
 - Method: `GET`
@@ -134,17 +134,17 @@ Client -> server:
 - `tressette:join-table` payload `{ tableId, username, position }`
 - `tressette:leave-table` payload `{ tableId, username }`
 - `tressette:start-game` payload `{ tableId, username }`
-- `tressette:play-card` payload `{ tableId, username, card? }`
+- `tressette:play-card` payload `{ tableId, username, card? }` (mode is selected at socket handshake via auth/query/header).
   - `card` is optional; if omitted server can auto-select a valid card for the player turn.
 
 Server -> client:
-- `tressette:table-updated` emitted to room `tressette:table:{tableId}` on join/leave/start/play-card.
+- `tressette:table-updated` emitted to room `tressette:table:{mode}:{tableId}` on join/leave/start/play-card.
 - `tressette:hand-started` emitted on successful start-game (triggered by socket start event or HTTP `/tables/:tableId/start` when realtime server is active).
-- `tressette:turn-started` emitted immediately after hand-started and then at each turn start with payload `{ tableId, trickNumber, currentPlayer, turnDeadlineMs, secondsRemaining, timeoutSeconds }`.
-- `tressette:turn-updated` emitted every second during active turn countdown with payload `{ tableId, trickNumber, currentPlayer, turnDeadlineMs, secondsRemaining, timeoutSeconds }`.
-- `tressette:card-played` emitted on each accepted play with payload `{ tableId, trickNumber, username, card, source }` (includes `source: "timeout_auto"` when autoplay is triggered by timer expiry).
+- `tressette:turn-started` emitted immediately after hand-started and then at each turn start with payload `{ tableId, mode, trickNumber, currentPlayer, turnDeadlineMs, secondsRemaining, timeoutSeconds }`.
+- `tressette:turn-updated` emitted every second during active turn countdown with payload `{ tableId, mode, trickNumber, currentPlayer, turnDeadlineMs, secondsRemaining, timeoutSeconds }`.
+- `tressette:card-played` emitted on each accepted play with payload `{ tableId, mode, trickNumber, username, card, source }` (includes `source: "timeout_auto"` when autoplay is triggered by timer expiry).
   - `source` is `"manual"` or `"timeout_auto"`.
-- `tressette:trick-ended` emitted after 4 cards of a trick with payload `{ tableId, trickNumber, winner, trickPoints, scoreSN, scoreEO }`.
+- `tressette:trick-ended` emitted after 4 cards of a trick with payload `{ tableId, mode, trickNumber, winner, trickPoints, scoreSN, scoreEO }`.
 - `tressette:error` emitted with contract error payload on validation/domain failures.
 
 ## Data conventions
@@ -165,7 +165,7 @@ Server -> client:
 
 ### Current HTTP error codes used by Tressette endpoints
 - `VALIDATION_ERROR` -> invalid/missing request fields (`400`)
-- `TABLE_NOT_FOUND` -> table does not exist (`404`)
+- `TABLE_NOT_FOUND` -> table does not exist in selected mode (`404`)
 - `TABLE_FULL` -> all positions already occupied (`409`)
 - `POSITION_NOT_AVAILABLE` -> requested seat already occupied (`409`)
 - `PLAYER_ALREADY_JOINED` -> username already in table (`409`)
@@ -206,6 +206,7 @@ When backend changes any endpoint/payload/event:
 1. Update this file in the same PR/commit.
 2. Add a short "Contract changes" section in commit/PR notes.
 3. Notify frontend thread with exact changed paths and examples.
+
 
 
 
