@@ -38,7 +38,7 @@ describe('Tressette engine integration', () => {
         })
     })
 
-    test('playCard happy path delegates to engine and advances turn', () => {
+    test('playCard happy path delegates to engine and advances turn order', () => {
         const { tableId } = setupStartedTable()
 
         const result = tressetteTableStore.playCard({
@@ -98,6 +98,19 @@ describe('Tressette engine integration', () => {
         )
     })
 
+    test('anticlockwise order includes Paolo -> Marta case', () => {
+        const created = tressetteTableStore.create({ owner: 'Marta' })
+        tressetteTableStore.join({ tableId: created.tableId, username: 'Vito', position: 'NORD' })
+        tressetteTableStore.join({ tableId: created.tableId, username: 'Tonino', position: 'EST' })
+        tressetteTableStore.join({ tableId: created.tableId, username: 'Paolo', position: 'OVEST' })
+
+        ;(Math.random as jest.Mock).mockReturnValue(0.99)
+        tressetteTableStore.start({ tableId: created.tableId, username: 'Marta' })
+
+        const play = tressetteTableStore.playCard({ tableId: created.tableId, username: 'Paolo', source: 'manual' })
+        expect(play.play.nextTurn?.turnPlayer).toBe('Marta')
+    })
+
     test('playCard returns domain error when player is not on turn', () => {
         const { tableId } = setupStartedTable()
 
@@ -116,3 +129,7 @@ describe('Tressette engine integration', () => {
         }
     })
 })
+
+
+
+

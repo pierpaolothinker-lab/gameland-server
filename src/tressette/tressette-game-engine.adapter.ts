@@ -38,6 +38,7 @@ type EngineSession = {
     handEnded: boolean
 }
 
+// 4 Incrociato turn order aligned with FE seats (example: Paolo -> Marta).
 const TURN_ORDER: Position3s74i[] = [
     Position3s74i.Sud,
     Position3s74i.Est,
@@ -140,7 +141,7 @@ export class TressetteGameEngineAdapter {
         }
 
         if (session.cardsInCurrentTrick < 4) {
-            session.currentTurnIndex = this.nextTurnIndex(session.currentTurnIndex)
+            session.currentTurnIndex = this.nextTurnIndex(session, session.currentTurnIndex)
             return {
                 ...outcomeBase,
                 nextTurn: this.getCurrentTurn(tableSnapshot.tableId),
@@ -255,8 +256,17 @@ export class TressetteGameEngineAdapter {
         }
     }
 
-    private nextTurnIndex(currentTurnIndex: number): number {
-        return (currentTurnIndex + 1) % TURN_ORDER.length
+    private nextTurnIndex(session: EngineSession, currentTurnIndex: number): number {
+        const currentPlayer = session.table.players[currentTurnIndex]
+        if (!currentPlayer) {
+            return (currentTurnIndex + 1) % TURN_ORDER.length
+        }
+
+        const currentOrderIndex = TURN_ORDER.indexOf(currentPlayer.position)
+        const nextPosition = TURN_ORDER[(currentOrderIndex + 1) % TURN_ORDER.length]
+        const nextPlayerIndex = session.table.players.findIndex((player) => player.position === nextPosition)
+
+        return nextPlayerIndex >= 0 ? nextPlayerIndex : (currentTurnIndex + 1) % TURN_ORDER.length
     }
 
     private toEnginePosition(position: TressettePosition): Position3s74i {

@@ -8,120 +8,88 @@ This document defines the integration contract between:
 - Backend: `gameland-server`
 - Frontend: `gameland-app`
 
-Use this file as the single reference when backend/frontend are developed in separate threads.
-
 ## Environments
 - Backend local base URL: `http://localhost:3500`
-- Frontend local URL: `http://localhost:4200` (legacy) and `http://localhost:4400` (current mock/dev host)
+- Frontend local URL: `http://localhost:4200` (legacy) and `http://localhost:4400` (current dev host)
 
-## Runtime Baseline (Task 1)
-This baseline is effective for all implementation threads until explicitly changed.
-
+## Runtime Baseline
 - API base URL (backend): `http://localhost:3500`
-- Socket.IO server URL: `http://localhost:3500` (default path `/socket.io`; no custom namespace required for FE integration)
-- Frontend dev URL: `http://localhost:4200`
-- Tressette HTTP base path: `/api/tressette/tables` (plural)
+- Socket.IO server URL: `http://localhost:3500`
+- Tressette HTTP base path: `/api/tressette/tables`
 
-### Current known mismatch (to be fixed in frontend implementation thread)
-- `gameland-app` environment currently points to port `3000`.
-- `gameland-app` currently uses `/api/tressette/table` (singular).
-- `gameland-app` uses native `WebSocket`, while backend realtime is `Socket.IO`.
+## Mode semantics
+- Supported modes: `demo` | `live`
+- Resolution precedence:
+1. Query param `mode`
+2. Header `x-mode` or `x-tressette-mode`
+- Default when omitted: `demo`
+- Invalid explicit mode: `400 VALIDATION_ERROR`
+- Same mode must be used consistently for HTTP and Socket flows.
 
-## Mode Semantics`r`n- Supported modes: `demo` | `live`.`r`n- Mode selector precedence:`r`n  1. Query param `mode``r`n  2. Header `x-mode` (or `x-tressette-mode`)`r`n- Default when mode is omitted: `demo`.`r`n- Invalid explicit mode value: `400 VALIDATION_ERROR`.`r`n- Mode is applied as single source of truth for both HTTP and Socket flows.`r`n`r`n## HTTP API (current)
-
+## HTTP API
 ### Health
-- Method: `GET`
-- Path: `/health`
-- Response `200`:
-
-```json
-{ "status": "ok" }
-```
+- `GET /health` -> `200 { "status": "ok" }`
 
 ### Tressette - Create table
-- Method: `POST`
-- Path: `/api/tressette/tables`
-- Request body:
+- `POST /api/tressette/tables`
+- Body: `{ "owner": "PlayerName" }`
+- `201` -> table snapshot
 
-```json
-{ "owner": "PlayerName" }
-```
-
-- Validation: `owner` is required, trimmed, non-empty, max 32 chars.
-- Response `201`:
-
-```json
-{
-  "tableId": "uuid",
-  "owner": "PlayerName",
-  "players": [{ "username": "PlayerName", "position": "SUD" }],
-  "isComplete": false,
-  "points": { "teamSN": 0, "teamEO": 0 },
-  "status": "waiting"
-}
-```
-
-### Tressette - Join table
-- Method: `POST`
-- Path: `/api/tressette/tables/:tableId/join`
-- Request body:
-
-```json
-{ "username": "PlayerName", "position": "NORD" }
-```
-
-- Validation: `username` is required, trimmed, non-empty, max 32 chars.
-- Response `200`: table snapshot updated.
-
-### Tressette - Leave table
-- Method: `POST`
-- Path: `/api/tressette/tables/:tableId/leave`
-- Request body:
-
-```json
-{ "username": "PlayerName" }
-```
-
-- Response `200`: table snapshot updated.
-
-### Tressette - Start game
-- Method: `POST`
-- Path: `/api/tressette/tables/:tableId/start`
-- Request body:
-
-```json
-{ "username": "OwnerName" }
-```
-
-- Response `200`: table snapshot with `status: "in_game"`.
+### Tressette - List tables
+- `GET /api/tressette/tables`
+- `200` -> table snapshots array (mode-aware)
 
 ### Tressette - Get table
-- Method: `GET`
-- Path: `/api/tressette/tables/:tableId`
-- Response `200`: table snapshot.
+- `GET /api/tressette/tables/:tableId`
+- `200` -> table snapshot
+- If table is `in_game`, response may include `currentTurn` bootstrap metadata.
 
-## WebSocket (Socket.IO) (current)
-Connection is initialized on backend server startup.
+### Tressette - Join table
+- `POST /api/tressette/tables/:tableId/join`
+- Body: `{ "username": "PlayerName", "position": "NORD" }`
 
-### Server -> client events
-- `message`
-  - On connect: welcome text
-  - On user connect/disconnect: broadcast text
-- `activity`
-  - Broadcast when another user emits activity
+### Tressette - Leave table
+- `POST /api/tressette/tables/:tableId/leave`
+- Body: `{ "username": "PlayerName" }`
 
-### Client -> server events
-- `message`
-  - Payload: free text
-  - Behavior: server re-broadcasts to all clients
-- `activity`
-  - Payload: `name` string
-  - Behavior: server broadcasts to other clients
+### Tressette - Start game
+- `POST /api/tressette/tables/:tableId/start`
+- Body: `{ "username": "OwnerName" }`
+- `200` -> table snapshot with `status: "in_game"`
 
-## Tressette MVP Contract (partial)
-Status: `PARTIALLY_IMPLEMENTED` (HTTP endpoints create/join/leave/start/get are implemented; realtime start/turn/timeout/autoplay chain is implemented server-side for dev flow).
+## Socket.IO events
+Turn order semantics (4 Incrociato, server-authoritative):
+- `SUD -> EST -> NORD -> OVEST -> SUD`
+- Covered case: `Paolo -> Marta`
 
-### Table model (logical)
+Client -> server:
+- `tressette:join-table` `{ tableId, username, position }`
+- `tressette:leave-table` `{ tableId, username }`
+- `tressette:start-game` `{ tableId, username }`
+- `tressette:play-card` `{ tableId, username, card? }`
+- `tressette:watch-table` `{ tableId, mode }` (watch/bootstrap request)
+- `tressette:bootstrap-table` `{ tableId }` (explicit bootstrap request)
+
+Server -> client:
+- `tressette:mode-selected`
+- `tressette:table-updated`
+- `tressette:hand-started`
+- `tressette:turn-started` `{ tableId, mode, trickNumber, currentPlayer, turnDeadlineMs, secondsRemaining, timeoutSeconds }`
+- `tressette:turn-updated` `{ tableId, mode, trickNumber, currentPlayer, turnDeadlineMs, secondsRemaining, timeoutSeconds }`
+- `tressette:turn-bootstrap` `{ tableId, mode, trickNumber, currentPlayer, turnDeadlineMs, secondsRemaining, timeoutSeconds }`
+- `tressette:card-played` `{ tableId, mode, trickNumber, username, card, source }`
+  - `source`: `manual | timeout_auto`
+- `tressette:trick-ended` `{ tableId, mode, trickNumber, winner, trickPoints, scoreSN, scoreEO }`
+- `tressette:error`
+
+### Timeout/autoplay
+- Turn timeout: `20s` server-authoritative.
+- On timeout, server auto-plays a random playable card and emits normal play chain.
+
+### Bootstrap rule (critical)
+If table is already `in_game`, client bootstrap/reconnect must receive current turn immediately (via `turn-bootstrap` and/or `currentTurn` HTTP metadata) without waiting for next action.
+
+## Table model
 - `tableId: string`
 - `owner: string`
 - `players: Array<{ username: string, position: "SUD" | "NORD" | "EST" | "OVEST" }>`
@@ -129,31 +97,7 @@ Status: `PARTIALLY_IMPLEMENTED` (HTTP endpoints create/join/leave/start/get are 
 - `points: { teamSN: number, teamEO: number }`
 - `status: "waiting" | "in_game" | "ended"`
 
-### Tressette Socket.IO events (current)
-Client -> server:
-- `tressette:join-table` payload `{ tableId, username, position }`
-- `tressette:leave-table` payload `{ tableId, username }`
-- `tressette:start-game` payload `{ tableId, username }`
-- `tressette:play-card` payload `{ tableId, username, card? }` (mode is selected at socket handshake via auth/query/header).
-  - `card` is optional; if omitted server can auto-select a valid card for the player turn.
-
-Server -> client:
-- `tressette:table-updated` emitted to room `tressette:table:{mode}:{tableId}` on join/leave/start/play-card.
-- `tressette:hand-started` emitted on successful start-game (triggered by socket start event or HTTP `/tables/:tableId/start` when realtime server is active).
-- `tressette:turn-started` emitted immediately after hand-started and then at each turn start with payload `{ tableId, mode, trickNumber, currentPlayer, turnDeadlineMs, secondsRemaining, timeoutSeconds }`.
-- `tressette:turn-updated` emitted every second during active turn countdown with payload `{ tableId, mode, trickNumber, currentPlayer, turnDeadlineMs, secondsRemaining, timeoutSeconds }`.
-- `tressette:card-played` emitted on each accepted play with payload `{ tableId, mode, trickNumber, username, card, source }` (includes `source: "timeout_auto"` when autoplay is triggered by timer expiry).
-  - `source` is `"manual"` or `"timeout_auto"`.
-- `tressette:trick-ended` emitted after 4 cards of a trick with payload `{ tableId, mode, trickNumber, winner, trickPoints, scoreSN, scoreEO }`.
-- `tressette:error` emitted with contract error payload on validation/domain failures.
-
-## Data conventions
-- Content type: `application/json`
-- IDs: strings
-- Position values on API should use uppercase Italian labels:
-  - `SUD`, `NORD`, `EST`, `OVEST`
-- Error payload shape:
-
+## Error payload
 ```json
 {
   "error": {
@@ -163,50 +107,28 @@ Server -> client:
 }
 ```
 
-### Current HTTP error codes used by Tressette endpoints
-- `VALIDATION_ERROR` -> invalid/missing request fields (`400`)
-- `TABLE_NOT_FOUND` -> table does not exist in selected mode (`404`)
-- `TABLE_FULL` -> all positions already occupied (`409`)
-- `POSITION_NOT_AVAILABLE` -> requested seat already occupied (`409`)
-- `PLAYER_ALREADY_JOINED` -> username already in table (`409`)
-- `PLAYER_NOT_FOUND` -> leave request for non-existent player (`404`)
-- `OWNER_CANNOT_LEAVE` -> owner cannot leave table (`409`)
-- `FORBIDDEN_START` -> non-owner trying to start (`403`)
-- `TABLE_NOT_COMPLETE` -> start with < 4 players (`409`)
-- `TABLE_ALREADY_STARTED` -> start requested after game start (`409`)
-- `TABLE_NOT_JOINABLE` -> join after game start (`409`)
-- `TABLE_NOT_LEAVABLE` -> leave after game start (`409`)
-- `TABLE_NOT_IN_GAME` -> play-card attempted when table is not in_game (`409`)
-- `ENGINE_NOT_INITIALIZED` -> missing runtime engine session for table (`409`)
-- `NOT_PLAYER_TURN` -> play-card by player not in turn (`409`)
-- `INVALID_CARD` -> invalid card payload format/value (`400`)
-- `CARD_NOT_OWNED` -> selected card is not owned by player (`409`)
-- `HAND_ALREADY_COMPLETED` -> play-card attempted after hand completed (`409`)
-
-## Mock Auth Session (dev only)
-This project does not implement real authentication in this scope (no JWT/session provider).
-
-Current temporary behavior for frontend mock logged-user UX:
-- FE may keep sending `owner`/`username` in HTTP payloads.
-- Backend validates usernames with minimal robust rules:
-  - required
-  - trim applied
-  - non-empty after trim
-  - max length 32
-- Optional header `x-mock-username` is supported only in non-production runtime (`NODE_ENV !== "production"`).
-  - If present and valid, it overrides body `owner`/`username` for create/join.
-  - If invalid, backend returns `400` with contract error payload (`VALIDATION_ERROR`).
-- In production, `x-mock-username` is ignored and body fields are used.
-
-Out of scope for this task:
-- Real auth, JWT, refresh tokens, identity provider integration.
+## Common HTTP error codes
+- `VALIDATION_ERROR` (`400`)
+- `TABLE_NOT_FOUND` (`404`)
+- `TABLE_FULL` (`409`)
+- `POSITION_NOT_AVAILABLE` (`409`)
+- `PLAYER_ALREADY_JOINED` (`409`)
+- `PLAYER_NOT_FOUND` (`404`)
+- `OWNER_CANNOT_LEAVE` (`409`)
+- `FORBIDDEN_START` (`403`)
+- `TABLE_NOT_COMPLETE` (`409`)
+- `TABLE_ALREADY_STARTED` (`409`)
+- `TABLE_NOT_JOINABLE` (`409`)
+- `TABLE_NOT_LEAVABLE` (`409`)
+- `TABLE_NOT_IN_GAME` (`409`)
+- `ENGINE_NOT_INITIALIZED` (`409`)
+- `NOT_PLAYER_TURN` (`409`)
+- `INVALID_CARD` (`400`)
+- `CARD_NOT_OWNED` (`409`)
+- `HAND_ALREADY_COMPLETED` (`409`)
 
 ## Change policy
 When backend changes any endpoint/payload/event:
 1. Update this file in the same PR/commit.
-2. Add a short "Contract changes" section in commit/PR notes.
-3. Notify frontend thread with exact changed paths and examples.
-
-
-
-
+2. Add a short "Contract changes" section in PR notes.
+3. Notify frontend thread with exact payload examples.
