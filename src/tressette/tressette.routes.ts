@@ -16,6 +16,11 @@ tressetteRouter.post('/tables', (req: Request, res: Response) => {
     return res.status(201).json(table)
 })
 
+tressetteRouter.get('/tables', (_req: Request, res: Response) => {
+    const tables = tressetteTableStore.list()
+    return res.status(200).json(tables)
+})
+
 tressetteRouter.get('/tables/:tableId', (req: Request, res: Response) => {
     try {
         const table = tressetteTableStore.getById(req.params.tableId)

@@ -1,4 +1,4 @@
-﻿import { Server } from 'socket.io'
+import { Server } from 'socket.io'
 import * as http from 'http'
 import { tressetteTableStore, TressetteStoreError } from './tressette/tressette-table.store'
 import { TRESSETTE_POSITIONS, TressettePosition } from './tressette/tressette.types'
@@ -21,6 +21,7 @@ type StartGamePayload = {
 
 type PlayCardPayload = {
     tableId?: unknown
+    username?: unknown
 }
 
 const readNonEmptyString = (value: unknown): string | null => {
@@ -45,6 +46,25 @@ const readPosition = (value: unknown): TressettePosition | null => {
 }
 
 const tableRoom = (tableId: string): string => `tressette:table:${tableId}`
+
+const emitStoreError = (socket: any, error: unknown) => {
+    if (error instanceof TressetteStoreError) {
+        socket.emit('tressette:error', {
+            error: {
+                code: error.code,
+                message: error.message
+            }
+        })
+        return
+    }
+
+    socket.emit('tressette:error', {
+        error: {
+            code: 'INTERNAL_ERROR',
+            message: 'internal server error'
+        }
+    })
+}
 
 export const createIo = (server: http.Server) => {
     const io = new Server(server, {
@@ -93,22 +113,7 @@ export const createIo = (server: http.Server) => {
                 socket.join(tableRoom(tableId))
                 io.to(tableRoom(tableId)).emit('tressette:table-updated', table)
             } catch (error: unknown) {
-                if (error instanceof TressetteStoreError) {
-                    socket.emit('tressette:error', {
-                        error: {
-                            code: error.code,
-                            message: error.message
-                        }
-                    })
-                    return
-                }
-
-                socket.emit('tressette:error', {
-                    error: {
-                        code: 'INTERNAL_ERROR',
-                        message: 'internal server error'
-                    }
-                })
+                emitStoreError(socket, error)
             }
         })
 
@@ -131,22 +136,7 @@ export const createIo = (server: http.Server) => {
                 io.to(tableRoom(tableId)).emit('tressette:table-updated', table)
                 socket.leave(tableRoom(tableId))
             } catch (error: unknown) {
-                if (error instanceof TressetteStoreError) {
-                    socket.emit('tressette:error', {
-                        error: {
-                            code: error.code,
-                            message: error.message
-                        }
-                    })
-                    return
-                }
-
-                socket.emit('tressette:error', {
-                    error: {
-                        code: 'INTERNAL_ERROR',
-                        message: 'internal server error'
-                    }
-                })
+                emitStoreError(socket, error)
             }
         })
 
@@ -173,37 +163,38 @@ export const createIo = (server: http.Server) => {
                     status: table.status
                 })
             } catch (error: unknown) {
-                if (error instanceof TressetteStoreError) {
-                    socket.emit('tressette:error', {
-                        error: {
-                            code: error.code,
-                            message: error.message
-                        }
-                    })
-                    return
-                }
-
-                socket.emit('tressette:error', {
-                    error: {
-                        code: 'INTERNAL_ERROR',
-                        message: 'internal server error'
-                    }
-                })
+                emitStoreError(socket, error)
             }
         })
 
         socket.on('tressette:play-card', (payload: PlayCardPayload) => {
             const tableId = readNonEmptyString(payload?.tableId)
-            if (tableId) {
-                socket.join(tableRoom(tableId))
+            const username = readNonEmptyString(payload?.username)
+
+            if (!tableId || !username) {
+                socket.emit('tressette:error', {
+                    error: {
+                        code: 'VALIDATION_ERROR',
+                        message: 'tableId and username are required'
+                    }
+                })
+                return
             }
 
-            socket.emit('tressette:error', {
-                error: {
-                    code: 'NOT_IMPLEMENTED',
-                    message: 'play-card is not implemented yet'
-                }
-            })
+            try {
+                const result = tressetteTableStore.playCard({ tableId, username })
+                socket.join(tableRoom(tableId))
+                io.to(tableRoom(tableId)).emit('tressette:table-updated', result.table)
+                io.to(tableRoom(tableId)).emit('tressette:trick-played', {
+                    tableId,
+                    winner: result.play.winner,
+                    nextPlayer: result.play.nextPlayer,
+                    tricksPlayed: result.play.tricksPlayed,
+                    status: result.table.status
+                })
+            } catch (error: unknown) {
+                emitStoreError(socket, error)
+            }
         })
     })
 

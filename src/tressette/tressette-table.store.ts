@@ -1,11 +1,15 @@
-﻿import { randomUUID } from 'crypto'
+import { randomUUID } from 'crypto'
 import {
     CreateTressetteTableInput,
     JoinTressetteTableInput,
     LeaveTressetteTableInput,
+    PlayCardTressetteInput,
     StartTressetteGameInput,
-    TressetteTable
+    TressettePlayCardOutcome,
+    TressetteTable,
+    TressetteTableStatus
 } from './tressette.types'
+import { tressetteGameEngineAdapter, TressetteGameEngineError } from './tressette-game-engine.adapter'
 
 export class TressetteStoreError extends Error {
     readonly code: string
@@ -16,6 +20,11 @@ export class TressetteStoreError extends Error {
         this.code = code
         this.httpStatus = httpStatus
     }
+}
+
+export type TressettePlayCardStoreResult = {
+    table: TressetteTable
+    play: TressettePlayCardOutcome
 }
 
 class TressetteTableStore {
@@ -33,6 +42,12 @@ class TressetteTableStore {
 
         this.tables.set(table.tableId, table)
         return this.clone(table)
+    }
+
+    list(): TressetteTable[] {
+        return Array.from(this.tables.values())
+            .sort((a, b) => this.getStatusRank(a.status) - this.getStatusRank(b.status))
+            .map((table) => this.clone(table))
     }
 
     getById(tableId: string): TressetteTable {
@@ -102,12 +117,45 @@ class TressetteTableStore {
             throw new TressetteStoreError('TABLE_ALREADY_STARTED', 'game already started', 409)
         }
 
+        try {
+            tressetteGameEngineAdapter.initialize(this.clone(table))
+        } catch (error: unknown) {
+            if (error instanceof TressetteGameEngineError) {
+                throw new TressetteStoreError(error.code, error.message, error.httpStatus)
+            }
+            throw new TressetteStoreError('ENGINE_INIT_FAILED', 'unable to initialize game engine', 500)
+        }
+
         table.status = 'in_game'
         return this.clone(table)
     }
 
+    playCard(input: PlayCardTressetteInput): TressettePlayCardStoreResult {
+        const table = this.requireTable(input.tableId)
+
+        if (table.status !== 'in_game') {
+            throw new TressetteStoreError('TABLE_NOT_IN_GAME', 'table is not in game', 409)
+        }
+
+        try {
+            const play = tressetteGameEngineAdapter.playCard(this.clone(table), input.username)
+            table.status = play.nextStatus
+
+            return {
+                table: this.clone(table),
+                play
+            }
+        } catch (error: unknown) {
+            if (error instanceof TressetteGameEngineError) {
+                throw new TressetteStoreError(error.code, error.message, error.httpStatus)
+            }
+            throw new TressetteStoreError('ENGINE_PLAY_FAILED', 'unable to play card', 500)
+        }
+    }
+
     reset(): void {
         this.tables.clear()
+        tressetteGameEngineAdapter.reset()
     }
 
     private requireTable(tableId: string): TressetteTable {
@@ -130,6 +178,20 @@ class TressetteTableStore {
             points: { ...table.points }
         }
     }
+
+    private getStatusRank(status: TressetteTableStatus): number {
+        switch (status) {
+            case 'waiting':
+                return 0
+            case 'in_game':
+                return 1
+            case 'ended':
+                return 2
+            default:
+                return 3
+        }
+    }
 }
 
 export const tressetteTableStore = new TressetteTableStore()
+
