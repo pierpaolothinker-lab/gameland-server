@@ -34,3 +34,12 @@
 - Files changed
 - Validation performed
 - Risks/notes
+
+## 2026-03-08 - Lobby Tavoli Tressette (thread outputs synced)
+- FE output: lobby page added with list/create/join and visual marker for full tables (4/4).
+- BE output: GET /api/tressette/tables endpoint added with ordering and contract updates.
+- Validation reported:
+  - FE: build + headless tests green in thread output.
+  - BE: targeted HTTP suite 10 passed, build OK.
+- Note: state was consolidated in project memory; branch cleanliness/PR flow remains mandatory before merge.
+

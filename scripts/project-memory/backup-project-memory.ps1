@@ -1,15 +1,25 @@
 ﻿param(
-    [string]$OutputRoot = "C:\Users\ingpi\Documents\code\gameland-server\backups\project-memory"
+    [string]$AppRepoPath = "",
+    [string]$OutputRoot = ""
 )
 
 $ErrorActionPreference = "Stop"
+
+$repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path
+$serverRepo = $repoRoot
+$memoryDir = Join-Path $serverRepo "docs\project-memory"
+
+if ([string]::IsNullOrWhiteSpace($AppRepoPath)) {
+    $AppRepoPath = Join-Path (Split-Path $serverRepo -Parent) "gameland-app"
+}
+
+if ([string]::IsNullOrWhiteSpace($OutputRoot)) {
+    $OutputRoot = Join-Path $serverRepo "backups\project-memory"
+}
+
 $timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
 $backupDir = Join-Path $OutputRoot $timestamp
 New-Item -ItemType Directory -Force -Path $backupDir | Out-Null
-
-$serverRepo = "C:\Users\ingpi\Documents\code\gameland-server"
-$appRepo = "C:\Users\ingpi\Documents\code\gameland-app"
-$memoryDir = Join-Path $serverRepo "docs\project-memory"
 
 Copy-Item -Path $memoryDir -Destination $backupDir -Recurse -Force
 
@@ -18,6 +28,10 @@ function Get-GitOutput {
         [string]$Repo,
         [string[]]$GitArgs
     )
+
+    if (-not (Test-Path $Repo)) {
+        return @("[info] repository not found: $Repo")
+    }
 
     try {
         $raw = & git -C $Repo @GitArgs 2>&1
@@ -36,8 +50,8 @@ function Get-GitOutput {
 
 $serverStatus = Get-GitOutput -Repo $serverRepo -GitArgs @("status", "--short")
 $serverLog = Get-GitOutput -Repo $serverRepo -GitArgs @("log", "--oneline", "-20")
-$appStatus = Get-GitOutput -Repo $appRepo -GitArgs @("status", "--short")
-$appLog = Get-GitOutput -Repo $appRepo -GitArgs @("log", "--oneline", "-20")
+$appStatus = Get-GitOutput -Repo $AppRepoPath -GitArgs @("status", "--short")
+$appLog = Get-GitOutput -Repo $AppRepoPath -GitArgs @("log", "--oneline", "-20")
 
 $serverStatus | Set-Content -Path (Join-Path $backupDir "server-git-status.txt") -Encoding UTF8
 $serverLog | Set-Content -Path (Join-Path $backupDir "server-git-log.txt") -Encoding UTF8

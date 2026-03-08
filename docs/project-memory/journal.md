@@ -14,3 +14,10 @@
 - What changed
 - Why it matters
 - Follow-up actions
+
+## 2026-03-08 (updates from FE/BE execution threads)
+- FE thread implemented Tressette lobby flow (list/create/join) with loading/empty/error states.
+- BE thread implemented GET /api/tressette/tables with ordering waiting -> in_game -> ended.
+- Acceptance criteria for lobby flow reported as satisfied by both FE and BE outputs.
+- Added high-level playbook and technical manual for governance continuity.
+

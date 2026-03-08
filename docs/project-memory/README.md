@@ -1,4 +1,4 @@
-﻿# Project Memory Hub
+# Project Memory Hub
 
 This folder is the strategic project memory for Gameland.
 It stores architecture notes, implementation diary, decisions, fixes, and roadmap evolution.
@@ -10,6 +10,8 @@ It stores architecture notes, implementation diary, decisions, fixes, and roadma
 - `decisions.md`: architecture and strategy decisions (ADR-style).
 - `roadmap-status.md`: current roadmap status by phase.
 - `open-questions.md`: unresolved items and assumptions.
+- `HIGH_LEVEL_PLAYBOOK.md`: high-level strategy and governance focus.
+- `TECHNICAL_MANUAL.md`: how to retrieve/update/backup information.
 - `OPERATIONS.md`: how to keep this memory updated.
 
 ## Update Rule

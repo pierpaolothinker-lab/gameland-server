@@ -1,0 +1,31 @@
+﻿name: Project Memory Backup
+
+on:
+  schedule:
+    - cron: '0 */6 * * *'
+  workflow_dispatch:
+
+jobs:
+  snapshot-and-backup:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Capture snapshot
+        shell: pwsh
+        run: ./scripts/project-memory/capture-project-snapshot.ps1
+
+      - name: Run backup
+        shell: pwsh
+        run: ./scripts/project-memory/backup-project-memory.ps1
+
+      - name: Upload project-memory artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: project-memory-${{ github.run_number }}
+          path: |
+            docs/project-memory
+            backups/project-memory
+          retention-days: 14

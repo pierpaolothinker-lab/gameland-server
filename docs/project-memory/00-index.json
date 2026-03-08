@@ -1,42 +1,52 @@
-﻿{
-  "project": "Gameland",
-  "owner_thread": "architecture-governance",
-  "last_initialized": "2026-03-08",
-  "storage": {
-    "hub": "docs/project-memory",
-    "backup_root": "backups/project-memory"
-  },
-  "artifacts": [
-    {
-      "id": "journal",
-      "path": "docs/project-memory/journal.md",
-      "purpose": "Chronological high-level diary"
-    },
-    {
-      "id": "implementation_log",
-      "path": "docs/project-memory/implementation-log.md",
-      "purpose": "Concrete implementation/fix history"
-    },
-    {
-      "id": "decisions",
-      "path": "docs/project-memory/decisions.md",
-      "purpose": "Architecture/strategy decisions"
-    },
-    {
-      "id": "roadmap_status",
-      "path": "docs/project-memory/roadmap-status.md",
-      "purpose": "Current progress by phase"
-    },
-    {
-      "id": "open_questions",
-      "path": "docs/project-memory/open-questions.md",
-      "purpose": "Pending clarifications and risks"
-    }
-  ],
-  "automation": {
-    "snapshot_script": "scripts/project-memory/capture-project-snapshot.ps1",
-    "backup_script": "scripts/project-memory/backup-project-memory.ps1",
-    "scheduler_script": "scripts/project-memory/register-backup-task.ps1",
-    "recommended_frequency": "Every 6 hours"
-  }
+{
+    "project":  "Gameland",
+    "owner_thread":  "architecture-governance",
+    "last_initialized":  "2026-03-08",
+    "storage":  {
+                    "hub":  "docs/project-memory",
+                    "backup_root":  "backups/project-memory"
+                },
+    "artifacts":  [
+                      {
+                          "id":  "journal",
+                          "path":  "docs/project-memory/journal.md",
+                          "purpose":  "Chronological high-level diary"
+                      },
+                      {
+                          "id":  "implementation_log",
+                          "path":  "docs/project-memory/implementation-log.md",
+                          "purpose":  "Concrete implementation/fix history"
+                      },
+                      {
+                          "id":  "decisions",
+                          "path":  "docs/project-memory/decisions.md",
+                          "purpose":  "Architecture/strategy decisions"
+                      },
+                      {
+                          "id":  "roadmap_status",
+                          "path":  "docs/project-memory/roadmap-status.md",
+                          "purpose":  "Current progress by phase"
+                      },
+                      {
+                          "id":  "open_questions",
+                          "path":  "docs/project-memory/open-questions.md",
+                          "purpose":  "Pending clarifications and risks"
+                      },
+                      {
+                          "id":  "high_level_playbook",
+                          "path":  "docs/project-memory/HIGH_LEVEL_PLAYBOOK.md",
+                          "purpose":  "High-level governance and architecture operating model"
+                      },
+                      {
+                          "id":  "technical_manual",
+                          "path":  "docs/project-memory/TECHNICAL_MANUAL.md",
+                          "purpose":  "Operational manual for retrieval, updates, and backups"
+                      }
+                  ],
+    "automation":  {
+                       "snapshot_script":  "scripts/project-memory/capture-project-snapshot.ps1",
+                       "backup_script":  "scripts/project-memory/backup-project-memory.ps1",
+                       "scheduler_script":  "scripts/project-memory/register-backup-task.ps1",
+                       "recommended_frequency":  "Every 6 hours"
+                   }
 }
