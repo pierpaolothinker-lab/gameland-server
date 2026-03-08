@@ -1,0 +1,16 @@
+﻿## Summary
+- [ ] Scope is clear and limited to one task.
+- [ ] Branch name follows `dev-<task-slug>`.
+- [ ] Target branch is `dev` (not `main`).
+
+## Validation
+- [ ] Local tests pass.
+- [ ] Manual verification completed (if UI/API behavior changed).
+
+## Contract & Docs
+- [ ] `docs/api-contract.md` updated if API/socket changed.
+- [ ] Relevant docs/runbook updated.
+
+## Risk check
+- [ ] No unrelated changes included.
+- [ ] Rollback strategy is clear.
