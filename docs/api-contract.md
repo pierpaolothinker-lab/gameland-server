@@ -72,6 +72,7 @@ This baseline is effective for all implementation threads until explicitly chang
 
 - Validation: `username` is required, trimmed, non-empty, max 32 chars.
 - Response `200`: table snapshot updated.
+- Error `404` (`TABLE_NOT_FOUND`): tableId does not exist.
 
 ### Tressette - Leave table
 - Method: `POST`
@@ -83,6 +84,7 @@ This baseline is effective for all implementation threads until explicitly chang
 ```
 
 - Response `200`: table snapshot updated.
+- Error `404` (`TABLE_NOT_FOUND`): tableId does not exist.
 
 ### Tressette - Start game
 - Method: `POST`
@@ -94,11 +96,13 @@ This baseline is effective for all implementation threads until explicitly chang
 ```
 
 - Response `200`: table snapshot with `status: "in_game"`.
+- Error `404` (`TABLE_NOT_FOUND`): tableId does not exist.
 
 ### Tressette - Get table
 - Method: `GET`
 - Path: `/api/tressette/tables/:tableId`
 - Response `200`: table snapshot.
+- Error `404` (`TABLE_NOT_FOUND`): tableId does not exist.
 
 ## WebSocket (Socket.IO) (current)
 Connection is initialized on backend server startup.

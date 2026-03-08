@@ -319,4 +319,38 @@ describe('Tressette table HTTP API', () => {
         const body = await response.json()
         expect(body.error.code).toBe('FORBIDDEN_START')
     })
+    test('join returns TABLE_NOT_FOUND for unknown tableId', async () => {
+        const response = await fetch(`${baseUrl}/api/tressette/tables/does-not-exist/join`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: 'Vito', position: 'NORD' })
+        })
+
+        expect(response.status).toBe(404)
+        const body = await response.json()
+        expect(body).toEqual({
+            error: {
+                code: 'TABLE_NOT_FOUND',
+                message: 'table not found'
+            }
+        })
+    })
+
+    test('start returns TABLE_NOT_FOUND for unknown tableId', async () => {
+        const response = await fetch(`${baseUrl}/api/tressette/tables/does-not-exist/start`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: 'Pierpaolo' })
+        })
+
+        expect(response.status).toBe(404)
+        const body = await response.json()
+        expect(body).toEqual({
+            error: {
+                code: 'TABLE_NOT_FOUND',
+                message: 'table not found'
+            }
+        })
+    })
 })
+
