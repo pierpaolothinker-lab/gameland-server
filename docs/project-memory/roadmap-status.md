@@ -1,4 +1,4 @@
-﻿# Roadmap Status
+# Roadmap Status
 
 ## Phase 1 - Contract first + table baseline
 - Status: In progress
@@ -24,3 +24,6 @@
   - Persistence strategy
   - Observability baseline
   - CI expansion + release hardening
+
+## Update Notes
+- [2026-03-08 01:03] Governance ops improved: manual memory update command introduced.
