@@ -12,13 +12,13 @@ Use this file as the single reference when backend/frontend are developed in sep
 
 ## Environments
 - Backend local base URL: `http://localhost:3500`
-- Frontend local URL: `http://localhost:4200`
+- Frontend local URL: `http://localhost:4200` (legacy) and `http://localhost:4400` (current mock/dev host)
 
 ## Runtime Baseline (Task 1)
 This baseline is effective for all implementation threads until explicitly changed.
 
 - API base URL (backend): `http://localhost:3500`
-- Socket.IO server URL: `http://localhost:3500` (default path `/socket.io`)
+- Socket.IO server URL: `http://localhost:3500` (default path `/socket.io`; no custom namespace required for FE integration)
 - Frontend dev URL: `http://localhost:4200`
 - Tressette HTTP base path: `/api/tressette/tables` (plural)
 
@@ -141,6 +141,7 @@ Server -> client:
 - `tressette:table-updated` emitted to room `tressette:table:{tableId}` on join/leave/start/play-card.
 - `tressette:hand-started` emitted on successful start-game (triggered by socket start event or HTTP `/tables/:tableId/start` when realtime server is active).
 - `tressette:turn-started` emitted immediately after hand-started and then at each turn start with payload `{ tableId, trickNumber, currentPlayer, turnDeadlineMs, secondsRemaining, timeoutSeconds }`.
+- `tressette:turn-updated` emitted every second during active turn countdown with payload `{ tableId, trickNumber, currentPlayer, turnDeadlineMs, secondsRemaining, timeoutSeconds }`.
 - `tressette:card-played` emitted on each accepted play with payload `{ tableId, trickNumber, username, card, source }` (includes `source: "timeout_auto"` when autoplay is triggered by timer expiry).
   - `source` is `"manual"` or `"timeout_auto"`.
 - `tressette:trick-ended` emitted after 4 cards of a trick with payload `{ tableId, trickNumber, winner, trickPoints, scoreSN, scoreEO }`.
@@ -205,5 +206,6 @@ When backend changes any endpoint/payload/event:
 1. Update this file in the same PR/commit.
 2. Add a short "Contract changes" section in commit/PR notes.
 3. Notify frontend thread with exact changed paths and examples.
+
 
 

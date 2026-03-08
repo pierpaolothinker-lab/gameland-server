@@ -36,6 +36,8 @@ type PlayCardPayload = {
 export const TURN_TIMEOUT_SECONDS = 20
 const TURN_TIMEOUT_MS = TURN_TIMEOUT_SECONDS * 1000
 
+const ALLOWED_SOCKET_ORIGINS = ['http://localhost:4200', 'http://localhost:4400', 'http://localhost:8100']
+
 const readNonEmptyString = (value: unknown): string | null => {
     if (typeof value !== 'string') {
         return null
@@ -148,11 +150,24 @@ const resolveCurrentPlayer = (table: TressetteTable, turnPlayer: string): Tresse
 export const createIo = (server: http.Server) => {
     const io = new Server(server, {
         cors: {
-            origin: process.env.NODE_ENV === 'production' ? false : true
+            origin: (origin, callback) => {
+                if (process.env.NODE_ENV === 'production') {
+                    callback(null, false)
+                    return
+                }
+
+                if (!origin || ALLOWED_SOCKET_ORIGINS.includes(origin)) {
+                    callback(null, true)
+                    return
+                }
+
+                callback(new Error('CORS not allowed'))
+            }
         }
     })
 
     const turnTimeouts = new Map<string, NodeJS.Timeout>()
+    const turnTickers = new Map<string, NodeJS.Timeout>()
 
     const clearTurnTimeout = (tableId: string) => {
         const existing = turnTimeouts.get(tableId)
@@ -164,8 +179,61 @@ export const createIo = (server: http.Server) => {
         turnTimeouts.delete(tableId)
     }
 
+    const clearTurnTicker = (tableId: string) => {
+        const existing = turnTickers.get(tableId)
+        if (!existing) {
+            return
+        }
+
+        clearInterval(existing)
+        turnTickers.delete(tableId)
+    }
+
+    const emitTurnUpdated = (
+        table: TressetteTable,
+        turn: TressetteTurnState,
+        currentPlayer: TressetteTablePlayer | null,
+        turnDeadlineMs: number
+    ) => {
+        const secondsRemaining = Math.max(0, Math.ceil((turnDeadlineMs - Date.now()) / 1000))
+
+        io.to(tableRoom(table.tableId)).emit('tressette:turn-updated', {
+            tableId: table.tableId,
+            trickNumber: turn.trickNumber,
+            currentPlayer: {
+                username: turn.turnPlayer,
+                position: currentPlayer?.position ?? null
+            },
+            turnDeadlineMs,
+            secondsRemaining,
+            timeoutSeconds: TURN_TIMEOUT_SECONDS
+        })
+    }
+
+    const startTurnTicker = (
+        table: TressetteTable,
+        turn: TressetteTurnState,
+        currentPlayer: TressetteTablePlayer | null,
+        turnDeadlineMs: number
+    ) => {
+        clearTurnTicker(table.tableId)
+
+        emitTurnUpdated(table, turn, currentPlayer, turnDeadlineMs)
+
+        const interval = setInterval(() => {
+            emitTurnUpdated(table, turn, currentPlayer, turnDeadlineMs)
+
+            if (Date.now() >= turnDeadlineMs) {
+                clearTurnTicker(table.tableId)
+            }
+        }, 1000)
+
+        turnTickers.set(table.tableId, interval)
+    }
+
     const emitTurnStarted = (table: TressetteTable, turn: TressetteTurnState): number => {
         clearTurnTimeout(table.tableId)
+        clearTurnTicker(table.tableId)
 
         const currentPlayer = resolveCurrentPlayer(table, turn.turnPlayer)
         const turnDeadlineMs = Date.now() + TURN_TIMEOUT_MS
@@ -182,7 +250,11 @@ export const createIo = (server: http.Server) => {
             timeoutSeconds: TURN_TIMEOUT_SECONDS
         })
 
+        startTurnTicker(table, turn, currentPlayer, turnDeadlineMs)
+
         const timeoutHandle = setTimeout(() => {
+            clearTurnTicker(table.tableId)
+
             try {
                 const result = tressetteTableStore.playCard({
                     tableId: table.tableId,
@@ -205,6 +277,7 @@ export const createIo = (server: http.Server) => {
         const { table, play } = result
 
         clearTurnTimeout(table.tableId)
+        clearTurnTicker(table.tableId)
 
         io.to(tableRoom(table.tableId)).emit('tressette:card-played', {
             tableId: play.tableId,

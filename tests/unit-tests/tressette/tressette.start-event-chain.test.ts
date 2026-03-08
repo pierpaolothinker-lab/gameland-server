@@ -52,6 +52,10 @@ describe('Tressette start event chain', () => {
             return { mocked: true } as any
         }) as typeof setTimeout)
 
+        const intervalSpy = jest.spyOn(global, 'setInterval').mockImplementation(((..._args: any[]) => {
+            return { mockedInterval: true } as any
+        }) as typeof setInterval)
+
         try {
             const response = await fetch(`${baseUrl}/api/tressette/tables/${created.tableId}/start`, {
                 method: 'POST',
@@ -67,10 +71,12 @@ describe('Tressette start event chain', () => {
             const tableUpdatedIdx = eventNames.indexOf('tressette:table-updated')
             const handStartedIdx = eventNames.indexOf('tressette:hand-started')
             const turnStartedIdx = eventNames.indexOf('tressette:turn-started')
+            const turnUpdatedIdx = eventNames.indexOf('tressette:turn-updated')
 
             expect(tableUpdatedIdx).toBeGreaterThanOrEqual(0)
             expect(handStartedIdx).toBeGreaterThan(tableUpdatedIdx)
             expect(turnStartedIdx).toBeGreaterThan(handStartedIdx)
+            expect(turnUpdatedIdx).toBeGreaterThan(turnStartedIdx)
 
             const turnStarted = emitted[turnStartedIdx].payload
             expect(turnStarted.tableId).toBe(created.tableId)
@@ -85,8 +91,16 @@ describe('Tressette start event chain', () => {
             expect(typeof turnStarted.turnDeadlineMs).toBe('number')
             expect(turnStarted.turnDeadlineMs).toBeGreaterThan(Date.now())
 
+            const turnUpdated = emitted[turnUpdatedIdx].payload
+            expect(turnUpdated.tableId).toBe(created.tableId)
+            expect(turnUpdated.currentPlayer.username).toBe(turnStarted.currentPlayer.username)
+            expect(turnUpdated.timeoutSeconds).toBe(TURN_TIMEOUT_SECONDS)
+            expect(typeof turnUpdated.secondsRemaining).toBe('number')
+
             expect(timeoutSpy).toHaveBeenCalledWith(expect.any(Function), TURN_TIMEOUT_SECONDS * 1000)
+            expect(intervalSpy).toHaveBeenCalledWith(expect.any(Function), 1000)
         } finally {
+            intervalSpy.mockRestore()
             timeoutSpy.mockRestore()
             toSpy.mockRestore()
         }
@@ -114,6 +128,10 @@ describe('Tressette start event chain', () => {
             return { mocked: true } as any
         }) as typeof setTimeout)
 
+        const intervalSpy = jest.spyOn(global, 'setInterval').mockImplementation(((..._args: any[]) => {
+            return { mockedInterval: true } as any
+        }) as typeof setInterval)
+
         try {
             const response = await fetch(`${baseUrl}/api/tressette/tables/${created.tableId}/start`, {
                 method: 'POST',
@@ -133,8 +151,13 @@ describe('Tressette start event chain', () => {
 
             const turnStartedEvents = emitted.filter((entry) => entry.event === 'tressette:turn-started')
             expect(turnStartedEvents.length).toBeGreaterThanOrEqual(2)
+
+            const turnUpdatedEvents = emitted.filter((entry) => entry.event === 'tressette:turn-updated')
+            expect(turnUpdatedEvents.length).toBeGreaterThanOrEqual(2)
             expect(timeoutSpy).toHaveBeenCalled()
+            expect(intervalSpy).toHaveBeenCalled()
         } finally {
+            intervalSpy.mockRestore()
             timeoutSpy.mockRestore()
             toSpy.mockRestore()
         }
