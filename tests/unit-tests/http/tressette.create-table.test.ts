@@ -320,12 +320,12 @@ describe('Tressette table HTTP API', () => {
         const body = await response.json()
         expect(body.error.code).toBe('FORBIDDEN_START')
     })
-    test('demo mode list is deterministic and live mode list is isolated', async () => {
+    test(''demo mode list is deterministic and live mode list is isolated'', async () => {
         const demoListResponse = await fetch(`${baseUrl}/api/tressette/tables`)
         expect(demoListResponse.status).toBe(200)
         const demoList = await demoListResponse.json()
         expect(Array.isArray(demoList)).toBe(true)
-        expect(demoList.some((x: { tableId: string }) => x.tableId === 'demo-wait-ready-001')).toBe(true)
+        expect(demoList.some((x: { tableId: string }) => x.tableId === ''demo-wait-ready-001'')).toBe(true)
 
         const liveListResponse = await fetch(`${baseUrl}/api/tressette/tables?mode=live`)
         expect(liveListResponse.status).toBe(200)
@@ -333,14 +333,45 @@ describe('Tressette table HTTP API', () => {
         expect(liveList).toEqual([])
     })
 
-    test('unknown table in selected mode returns TABLE_NOT_FOUND', async () => {
+    test(''unknown table in selected mode returns TABLE_NOT_FOUND'', async () => {
         const response = await fetch(`${baseUrl}/api/tressette/tables/demo-wait-ready-001?mode=live`)
 
         expect(response.status).toBe(404)
         const body = await response.json()
-        expect(body.error.code).toBe('TABLE_NOT_FOUND')
+        expect(body.error.code).toBe(''TABLE_NOT_FOUND'')
+    })
+
+    test(''join returns TABLE_NOT_FOUND for unknown tableId'', async () => {
+        const response = await fetch(`${baseUrl}/api/tressette/tables/does-not-exist/join`, {
+            method: ''POST'',
+            headers: { ''Content-Type'': ''application/json'' },
+            body: JSON.stringify({ username: ''Vito'', position: ''NORD'' })
+        })
+
+        expect(response.status).toBe(404)
+        const body = await response.json()
+        expect(body).toEqual({
+            error: {
+                code: ''TABLE_NOT_FOUND'',
+                message: ''table not found''
+            }
+        })
+    })
+
+    test(''start returns TABLE_NOT_FOUND for unknown tableId'', async () => {
+        const response = await fetch(`${baseUrl}/api/tressette/tables/does-not-exist/start`, {
+            method: ''POST'',
+            headers: { ''Content-Type'': ''application/json'' },
+            body: JSON.stringify({ username: ''Pierpaolo'' })
+        })
+
+        expect(response.status).toBe(404)
+        const body = await response.json()
+        expect(body).toEqual({
+            error: {
+                code: ''TABLE_NOT_FOUND'',
+                message: ''table not found''
+            }
+        })
     })
 })
-
-
-

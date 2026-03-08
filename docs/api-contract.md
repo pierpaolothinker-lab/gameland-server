@@ -4,16 +4,14 @@ Last updated: 2026-03-08
 Source of truth: backend (`gameland-server`)
 
 ## Purpose
-This document defines the integration contract between:
-- Backend: `gameland-server`
-- Frontend: `gameland-app`
+This document defines the integration contract between backend (`gameland-server`) and frontend (`gameland-app`).
 
 ## Environments
 - Backend local base URL: `http://localhost:3500`
 - Frontend local URL: `http://localhost:4200` (legacy) and `http://localhost:4400` (current dev host)
 
 ## Runtime Baseline
-- API base URL (backend): `http://localhost:3500`
+- API base URL: `http://localhost:3500`
 - Socket.IO server URL: `http://localhost:3500`
 - Tressette HTTP base path: `/api/tressette/tables`
 
@@ -23,8 +21,8 @@ This document defines the integration contract between:
 1. Query param `mode`
 2. Header `x-mode` or `x-tressette-mode`
 - Default when omitted: `demo`
-- Invalid explicit mode: `400 VALIDATION_ERROR`
-- Same mode must be used consistently for HTTP and Socket flows.
+- Invalid explicit mode value: `400 VALIDATION_ERROR`
+- Same mode must be used consistently for HTTP and socket flows.
 
 ## HTTP API
 ### Health
@@ -43,19 +41,25 @@ This document defines the integration contract between:
 - `GET /api/tressette/tables/:tableId`
 - `200` -> table snapshot
 - If table is `in_game`, response may include `currentTurn` bootstrap metadata.
+- `404` -> `TABLE_NOT_FOUND`
 
 ### Tressette - Join table
 - `POST /api/tressette/tables/:tableId/join`
 - Body: `{ "username": "PlayerName", "position": "NORD" }`
+- `200` -> updated table snapshot
+- `404` -> `TABLE_NOT_FOUND`
 
 ### Tressette - Leave table
 - `POST /api/tressette/tables/:tableId/leave`
 - Body: `{ "username": "PlayerName" }`
+- `200` -> updated table snapshot
+- `404` -> `TABLE_NOT_FOUND`
 
 ### Tressette - Start game
 - `POST /api/tressette/tables/:tableId/start`
 - Body: `{ "username": "OwnerName" }`
 - `200` -> table snapshot with `status: "in_game"`
+- `404` -> `TABLE_NOT_FOUND`
 
 ## Socket.IO events
 Turn order semantics (4 Incrociato, server-authoritative):
@@ -67,8 +71,8 @@ Client -> server:
 - `tressette:leave-table` `{ tableId, username }`
 - `tressette:start-game` `{ tableId, username }`
 - `tressette:play-card` `{ tableId, username, card? }`
-- `tressette:watch-table` `{ tableId, mode }` (watch/bootstrap request)
-- `tressette:bootstrap-table` `{ tableId }` (explicit bootstrap request)
+- `tressette:watch-table` `{ tableId, mode }`
+- `tressette:bootstrap-table` `{ tableId }`
 
 Server -> client:
 - `tressette:mode-selected`
@@ -83,16 +87,16 @@ Server -> client:
 - `tressette:error`
 
 ### Timeout/autoplay
-- Turn timeout: `20s` server-authoritative.
+- Turn timeout: `20s` (server-authoritative)
 - On timeout, server auto-plays a random playable card and emits normal play chain.
 
-### Bootstrap rule (critical)
-If table is already `in_game`, client bootstrap/reconnect must receive current turn immediately (via `turn-bootstrap` and/or `currentTurn` HTTP metadata) without waiting for next action.
+### Bootstrap rule
+If table is already `in_game`, bootstrap/reconnect must receive current turn immediately (via `turn-bootstrap` and/or HTTP `currentTurn`) without waiting for next action.
 
 ## Table model
 - `tableId: string`
 - `owner: string`
-- `players: Array<{ username: string, position: "SUD" | "NORD" | "EST" | "OVEST" }>`
+- `players: `Array<{ username: string, position: "SUD" | "NORD" | "EST" | "OVEST" }>`
 - `isComplete: boolean`
 - `points: { teamSN: number, teamEO: number }`
 - `status: "waiting" | "in_game" | "ended"`
@@ -131,4 +135,4 @@ If table is already `in_game`, client bootstrap/reconnect must receive current t
 When backend changes any endpoint/payload/event:
 1. Update this file in the same PR/commit.
 2. Add a short "Contract changes" section in PR notes.
-3. Notify frontend thread with exact payload examples.
+3. Notify frontend thread with exact changed payload examples.
