@@ -19,7 +19,12 @@ const setupStartedTable = () => {
 
 describe('Tressette engine integration', () => {
     beforeEach(() => {
+        jest.spyOn(Math, 'random').mockReturnValue(0)
         tressetteTableStore.reset()
+    })
+
+    afterEach(() => {
+        jest.restoreAllMocks()
     })
 
     test('start initializes engine session for table', () => {
@@ -27,25 +32,81 @@ describe('Tressette engine integration', () => {
 
         expect(started.status).toBe('in_game')
         expect(tressetteGameEngineAdapter.isInitialized(tableId)).toBe(true)
+        expect(tressetteTableStore.getCurrentTurn(tableId)).toEqual({
+            trickNumber: 1,
+            turnPlayer: 'Pierpaolo'
+        })
     })
 
-    test('playCard happy path delegates to engine and updates trick progress', () => {
+    test('playCard happy path delegates to engine and advances turn', () => {
         const { tableId } = setupStartedTable()
 
-        const result = tressetteTableStore.playCard({ tableId, username: 'Pierpaolo' })
+        const result = tressetteTableStore.playCard({
+            tableId,
+            username: 'Pierpaolo',
+            source: 'manual'
+        })
 
         expect(result.table.tableId).toBe(tableId)
         expect(result.table.status).toBe('in_game')
-        expect(result.play.tricksPlayed).toBe(1)
-        expect(typeof result.play.winner).toBe('string')
-        expect(typeof result.play.nextPlayer).toBe('string')
+        expect(result.play.source).toBe('manual')
+        expect(result.play.trickNumber).toBe(1)
+        expect(result.play.trickEnded).toBeNull()
+        expect(result.play.nextTurn?.turnPlayer).toBe('Tonino')
+    })
+
+    test('playCard timeout auto mode is accepted for current turn player', () => {
+        const { tableId } = setupStartedTable()
+
+        const result = tressetteTableStore.playCard({
+            tableId,
+            username: 'Pierpaolo',
+            source: 'timeout_auto'
+        })
+
+        expect(result.play.source).toBe('timeout_auto')
+        expect(result.play.card).toEqual(
+            expect.objectContaining({
+                suit: expect.any(Number),
+                value: expect.any(Number)
+            })
+        )
+    })
+
+    test('four plays close trick and return trick outcome', () => {
+        const { tableId } = setupStartedTable()
+
+        tressetteTableStore.playCard({ tableId, username: 'Pierpaolo', source: 'manual' })
+        tressetteTableStore.playCard({ tableId, username: 'Tonino', source: 'manual' })
+        tressetteTableStore.playCard({ tableId, username: 'Vito', source: 'manual' })
+        const fourthPlay = tressetteTableStore.playCard({ tableId, username: 'Paolo', source: 'manual' })
+
+        expect(fourthPlay.play.trickEnded).toEqual(
+            expect.objectContaining({
+                trickNumber: 1,
+                winner: expect.any(String),
+                trickPoints: expect.any(Number),
+                scoreSN: expect.any(Number),
+                scoreEO: expect.any(Number)
+            })
+        )
+        expect(fourthPlay.play.nextTurn).toEqual(
+            expect.objectContaining({
+                trickNumber: 2,
+                turnPlayer: expect.any(String)
+            })
+        )
     })
 
     test('playCard returns domain error when player is not on turn', () => {
         const { tableId } = setupStartedTable()
 
         try {
-            tressetteTableStore.playCard({ tableId, username: 'Vito' })
+            tressetteTableStore.playCard({
+                tableId,
+                username: 'Vito',
+                source: 'manual'
+            })
             fail('expected playCard to throw')
         } catch (error: unknown) {
             expect(error).toBeInstanceOf(TressetteStoreError)

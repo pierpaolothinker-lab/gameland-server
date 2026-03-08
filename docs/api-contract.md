@@ -119,7 +119,7 @@ Connection is initialized on backend server startup.
   - Behavior: server broadcasts to other clients
 
 ## Tressette MVP Contract (partial)
-Status: `PARTIALLY_IMPLEMENTED` (HTTP endpoints create/join/leave/start/get and Socket.IO table events are implemented; play-card baseline is integrated with engine, full gameplay flow remains partial)
+Status: `PARTIALLY_IMPLEMENTED` (HTTP endpoints create/join/leave/start/get are implemented; realtime start/turn/timeout/autoplay chain is implemented server-side for dev flow).
 
 ### Table model (logical)
 - `tableId: string`
@@ -134,13 +134,17 @@ Client -> server:
 - `tressette:join-table` payload `{ tableId, username, position }`
 - `tressette:leave-table` payload `{ tableId, username }`
 - `tressette:start-game` payload `{ tableId, username }`
-- `tressette:play-card` payload `{ tableId, username }`
+- `tressette:play-card` payload `{ tableId, username, card? }`
+  - `card` is optional; if omitted server can auto-select a valid card for the player turn.
 
 Server -> client:
-- `tressette:table-updated` emitted to room `tressette:table:{tableId}` on join/leave/start/play-card
-- `tressette:hand-started` emitted on successful start-game
-- `tressette:trick-played` emitted on successful play-card with payload `{ tableId, winner, nextPlayer, tricksPlayed, status }`
-- `tressette:error` emitted with contract error payload on validation/domain failures
+- `tressette:table-updated` emitted to room `tressette:table:{tableId}` on join/leave/start/play-card.
+- `tressette:hand-started` emitted on successful start-game (triggered by socket start event or HTTP `/tables/:tableId/start` when realtime server is active).
+- `tressette:turn-started` emitted immediately after hand-started and then at each turn start with payload `{ tableId, trickNumber, currentPlayer, turnDeadlineMs, secondsRemaining, timeoutSeconds }`.
+- `tressette:card-played` emitted on each accepted play with payload `{ tableId, trickNumber, username, card, source }` (includes `source: "timeout_auto"` when autoplay is triggered by timer expiry).
+  - `source` is `"manual"` or `"timeout_auto"`.
+- `tressette:trick-ended` emitted after 4 cards of a trick with payload `{ tableId, trickNumber, winner, trickPoints, scoreSN, scoreEO }`.
+- `tressette:error` emitted with contract error payload on validation/domain failures.
 
 ## Data conventions
 - Content type: `application/json`
@@ -172,8 +176,10 @@ Server -> client:
 - `TABLE_NOT_JOINABLE` -> join after game start (`409`)
 - `TABLE_NOT_LEAVABLE` -> leave after game start (`409`)
 - `TABLE_NOT_IN_GAME` -> play-card attempted when table is not in_game (`409`)
-- `ENGINE_NOT_INITIALIZED` -> start not initialized or missing runtime engine session (`409`)
+- `ENGINE_NOT_INITIALIZED` -> missing runtime engine session for table (`409`)
 - `NOT_PLAYER_TURN` -> play-card by player not in turn (`409`)
+- `INVALID_CARD` -> invalid card payload format/value (`400`)
+- `CARD_NOT_OWNED` -> selected card is not owned by player (`409`)
 - `HAND_ALREADY_COMPLETED` -> play-card attempted after hand completed (`409`)
 
 ## Mock Auth Session (dev only)
@@ -199,3 +205,5 @@ When backend changes any endpoint/payload/event:
 1. Update this file in the same PR/commit.
 2. Add a short "Contract changes" section in commit/PR notes.
 3. Notify frontend thread with exact changed paths and examples.
+
+

@@ -1,6 +1,7 @@
 import { Request, Response, Router } from 'express'
 import { tressetteTableStore, TressetteStoreError } from './tressette-table.store'
-import { TRESSETTE_POSITIONS, TressettePosition } from './tressette.types'
+import { TRESSETTE_POSITIONS, TressettePosition, TressetteTableStatus } from './tressette.types'
+import { dispatchStartPipeline } from './tressette-start.pipeline'
 
 export const tressetteRouter = Router()
 
@@ -79,10 +80,19 @@ tressetteRouter.post('/tables/:tableId/start', (req: Request, res: Response) => 
         return sendValidationError(res, 'username is required')
     }
 
+    const statusBefore = readStatusBeforeStart(req.params.tableId)
+
     try {
         const table = tressetteTableStore.start({
             tableId: req.params.tableId,
             username
+        })
+
+        dispatchStartPipeline({
+            table,
+            owner: username,
+            statusBefore,
+            trigger: 'http'
         })
 
         return res.status(200).json(table)
@@ -150,6 +160,14 @@ const readNonEmptyString = (value: unknown): string | null => {
 
     const normalized = value.trim()
     return normalized.length > 0 ? normalized : null
+}
+
+const readStatusBeforeStart = (tableId: string): TressetteTableStatus => {
+    try {
+        return tressetteTableStore.getById(tableId).status
+    } catch (_error: unknown) {
+        return 'waiting'
+    }
 }
 
 const readPosition = (value: unknown): TressettePosition | null => {

@@ -43,14 +43,41 @@ export type StartTressetteGameInput = {
     username: string
 }
 
+export type TressetteCard = {
+    suit: number
+    value: number
+}
+
+export type TressettePlayCardSource = 'manual' | 'timeout_auto'
+
 export type PlayCardTressetteInput = {
     tableId: string
     username: string
+    source: TressettePlayCardSource
+    card?: TressetteCard
+}
+
+export type TressetteTurnState = {
+    trickNumber: number
+    turnPlayer: string
+}
+
+export type TressetteTrickEnded = {
+    trickNumber: number
+    winner: string
+    trickPoints: number
+    scoreSN: number
+    scoreEO: number
 }
 
 export type TressettePlayCardOutcome = {
-    winner: string
-    nextPlayer: string
-    tricksPlayed: number
+    tableId: string
+    trickNumber: number
+    username: string
+    card: TressetteCard
+    source: TressettePlayCardSource
+    nextTurn: TressetteTurnState | null
+    trickEnded: TressetteTrickEnded | null
+    handEnded: boolean
     nextStatus: TressetteTableStatus
 }

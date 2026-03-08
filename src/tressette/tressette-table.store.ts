@@ -7,7 +7,8 @@ import {
     StartTressetteGameInput,
     TressettePlayCardOutcome,
     TressetteTable,
-    TressetteTableStatus
+    TressetteTableStatus,
+    TressetteTurnState
 } from './tressette.types'
 import { tressetteGameEngineAdapter, TressetteGameEngineError } from './tressette-game-engine.adapter'
 
@@ -130,6 +131,15 @@ class TressetteTableStore {
         return this.clone(table)
     }
 
+    getCurrentTurn(tableId: string): TressetteTurnState | null {
+        const table = this.requireTable(tableId)
+        if (table.status !== 'in_game') {
+            return null
+        }
+
+        return tressetteGameEngineAdapter.getCurrentTurn(tableId)
+    }
+
     playCard(input: PlayCardTressetteInput): TressettePlayCardStoreResult {
         const table = this.requireTable(input.tableId)
 
@@ -138,7 +148,11 @@ class TressetteTableStore {
         }
 
         try {
-            const play = tressetteGameEngineAdapter.playCard(this.clone(table), input.username)
+            const play = tressetteGameEngineAdapter.playCard(this.clone(table), {
+                username: input.username,
+                source: input.source,
+                card: input.card
+            })
             table.status = play.nextStatus
 
             return {
@@ -194,4 +208,3 @@ class TressetteTableStore {
 }
 
 export const tressetteTableStore = new TressetteTableStore()
-

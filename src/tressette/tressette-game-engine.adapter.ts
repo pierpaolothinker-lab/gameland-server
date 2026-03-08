@@ -2,7 +2,18 @@ import { Player } from '../domain/player.model'
 import { DeckIT } from '../domain/decks/deckIt.model'
 import { Position3s74i, Player3s74i } from '../domain/games/3s7/3s74i/player3s74i.model'
 import { Table3s74i } from '../domain/games/3s7/3s74i/table3s74i.model'
-import { TressettePlayCardOutcome, TressettePosition, TressetteTable } from './tressette.types'
+import { Card3s7 } from '../domain/games/3s7/card3s7.model'
+import {
+    TressetteCard,
+    PlayCardTressetteInput,
+    TressettePlayCardOutcome,
+    TressettePosition,
+    TressetteTable,
+    TressetteTurnState
+} from './tressette.types'
+import { Trick3s4i } from '../domain/games/3s7/3s74i/trick3s74i.model'
+import { Play } from '../domain/play.type'
+import { getRandomInteger } from '../helpers/math.helper'
 
 export class TressetteGameEngineError extends Error {
     readonly code: string
@@ -17,14 +28,27 @@ export class TressetteGameEngineError extends Error {
 
 type EngineSession = {
     table: Table3s74i
-    currentOpenerIndex: number
-    tricksPlayed: number
+    trickNumber: number
+    cardsInCurrentTrick: number
+    currentTurnIndex: number
+    currentTrick: Trick3s4i
+    leadCard: Card3s7 | null
+    scoreSN: number
+    scoreEO: number
+    handEnded: boolean
 }
+
+const TURN_ORDER: Position3s74i[] = [
+    Position3s74i.Sud,
+    Position3s74i.Est,
+    Position3s74i.Nord,
+    Position3s74i.Ovest
+]
 
 class TressetteGameEngineAdapter {
     private readonly sessions = new Map<string, EngineSession>()
 
-    initialize(tableSnapshot: TressetteTable): void {
+    initialize(tableSnapshot: TressetteTable): TressetteTurnState {
         if (tableSnapshot.players.length !== 4 || !tableSnapshot.isComplete) {
             throw new TressetteGameEngineError('TABLE_NOT_COMPLETE', 'table must have 4 players to start', 409)
         }
@@ -37,19 +61,45 @@ class TressetteGameEngineAdapter {
             engineTable.join(new Player(player.username), this.toEnginePosition(player.position))
         })
 
-        engineTable.tricks = [[[]]]
-        engineTable.handOpenerIndex = 0
         engineTable.deck.italianShuffle()
+        const openerIndex = getRandomInteger(0, 3)
+        engineTable.handOpenerIndex = openerIndex
         engineTable.distribuiteCards()
 
-        this.sessions.set(tableSnapshot.tableId, {
+        const session: EngineSession = {
             table: engineTable,
-            currentOpenerIndex: engineTable.handOpenerIndex,
-            tricksPlayed: 0
-        })
+            trickNumber: 1,
+            cardsInCurrentTrick: 0,
+            currentTurnIndex: openerIndex,
+            currentTrick: new Trick3s4i(),
+            leadCard: null,
+            scoreSN: 0,
+            scoreEO: 0,
+            handEnded: false
+        }
+
+        this.sessions.set(tableSnapshot.tableId, session)
+        return this.getCurrentTurn(tableSnapshot.tableId) as TressetteTurnState
     }
 
-    playCard(tableSnapshot: TressetteTable, username: string): TressettePlayCardOutcome {
+    getCurrentTurn(tableId: string): TressetteTurnState | null {
+        const session = this.sessions.get(tableId)
+        if (!session || session.handEnded) {
+            return null
+        }
+
+        const turnPlayer = session.table.players[session.currentTurnIndex]
+        if (!turnPlayer) {
+            return null
+        }
+
+        return {
+            trickNumber: session.trickNumber,
+            turnPlayer: turnPlayer.username
+        }
+    }
+
+    playCard(tableSnapshot: TressetteTable, input: Omit<PlayCardTressetteInput, 'tableId'>): TressettePlayCardOutcome {
         const session = this.sessions.get(tableSnapshot.tableId)
         if (!session) {
             throw new TressetteGameEngineError('ENGINE_NOT_INITIALIZED', 'game engine session not initialized', 409)
@@ -59,32 +109,99 @@ class TressetteGameEngineAdapter {
             throw new TressetteGameEngineError('TABLE_NOT_IN_GAME', 'table is not in game', 409)
         }
 
-        if (session.tricksPlayed >= 10) {
+        if (session.handEnded) {
             throw new TressetteGameEngineError('HAND_ALREADY_COMPLETED', 'current hand is already completed', 409)
         }
 
-        const expectedPlayer = session.table.players[session.currentOpenerIndex]
-        if (!expectedPlayer || expectedPlayer.username !== username) {
+        const currentPlayer = session.table.players[session.currentTurnIndex]
+        if (!currentPlayer || currentPlayer.username !== input.username) {
             throw new TressetteGameEngineError('NOT_PLAYER_TURN', 'it is not the player turn', 409)
         }
 
-        const winner = session.table.playTrick(session.currentOpenerIndex, 0, 0)
-        session.tricksPlayed += 1
+        const card = this.resolveCardToPlay(session, currentPlayer, input)
+        const play: Play = {
+            player: currentPlayer,
+            card
+        }
+        session.currentTrick.addPlay(play)
 
-        const nextOpenerIndex = session.table.players.findIndex((player: Player3s74i) => player.username === winner.username)
-        session.currentOpenerIndex = nextOpenerIndex >= 0 ? nextOpenerIndex : session.currentOpenerIndex
+        if (session.cardsInCurrentTrick === 0) {
+            session.leadCard = card
+        }
 
-        let nextStatus: 'in_game' | 'ended' = 'in_game'
-        if (session.tricksPlayed >= 10) {
-            session.table.calculatePoints(0, 0)
-            nextStatus = session.table.isSetEnded() ? 'ended' : 'in_game'
+        session.cardsInCurrentTrick += 1
+
+        const outcomeBase = {
+            tableId: tableSnapshot.tableId,
+            trickNumber: session.trickNumber,
+            username: input.username,
+            card: this.toPlainCard(card),
+            source: input.source
+        }
+
+        if (session.cardsInCurrentTrick < 4) {
+            session.currentTurnIndex = this.nextTurnIndex(session.currentTurnIndex)
+            return {
+                ...outcomeBase,
+                nextTurn: this.getCurrentTurn(tableSnapshot.tableId),
+                trickEnded: null,
+                handEnded: false,
+                nextStatus: 'in_game'
+            }
+        }
+
+        session.currentTrick.setWinner()
+        const winner = session.currentTrick.getWinner()
+
+        let trickPoints = session.currentTrick.getTotalScore()
+        if (session.trickNumber === 10) {
+            trickPoints += 3
+        }
+
+        const winnerSeat = session.table.players.find((player: Player3s74i) => player.username === winner.username)
+        if (!winnerSeat) {
+            throw new TressetteGameEngineError('ENGINE_PLAY_FAILED', 'unable to evaluate trick winner', 500)
+        }
+
+        if (winnerSeat.position === Position3s74i.Sud || winnerSeat.position === Position3s74i.Nord) {
+            session.scoreSN += Math.floor(trickPoints / 3)
+        } else {
+            session.scoreEO += Math.floor(trickPoints / 3)
+        }
+
+        const winnerIndex = session.table.players.findIndex((player: Player3s74i) => player.username === winner.username)
+        session.currentTurnIndex = winnerIndex
+
+        const trickEnded = {
+            trickNumber: session.trickNumber,
+            winner: winner.username,
+            trickPoints,
+            scoreSN: session.scoreSN,
+            scoreEO: session.scoreEO
+        }
+
+        session.trickNumber += 1
+        session.cardsInCurrentTrick = 0
+        session.currentTrick = new Trick3s4i()
+        session.leadCard = null
+
+        if (trickEnded.trickNumber >= 10) {
+            session.handEnded = true
+            return {
+                ...outcomeBase,
+                nextTurn: null,
+                trickEnded,
+                handEnded: true,
+                nextStatus: 'ended'
+            }
         }
 
         return {
-            winner: winner.username,
-            nextPlayer: session.table.players[session.currentOpenerIndex].username,
-            tricksPlayed: session.tricksPlayed,
-            nextStatus
+            ...outcomeBase,
+            nextTurn: this.getCurrentTurn(tableSnapshot.tableId),
+            trickEnded,
+            handEnded: false,
+            nextStatus: 'in_game'
         }
     }
 
@@ -94,6 +211,52 @@ class TressetteGameEngineAdapter {
 
     reset(): void {
         this.sessions.clear()
+    }
+
+    private resolveCardToPlay(session: EngineSession, currentPlayer: Player3s74i, input: Omit<PlayCardTressetteInput, 'tableId'>): Card3s7 {
+        if (input.card) {
+            const card = this.parseManualCard(input.card)
+            try {
+                currentPlayer.playCard(card)
+                return card
+            } catch (_error: unknown) {
+                throw new TressetteGameEngineError('CARD_NOT_OWNED', 'selected card is not owned by player', 409)
+            }
+        }
+
+        if (session.cardsInCurrentTrick === 0 || !session.leadCard) {
+            return currentPlayer.playCardRandom()
+        }
+
+        return currentPlayer.respondToCardRandom(session.leadCard)
+    }
+
+    private parseManualCard(inputCard: TressetteCard): Card3s7 {
+        if (
+            !Number.isInteger(inputCard.suit) ||
+            !Number.isInteger(inputCard.value) ||
+            inputCard.suit < 0 ||
+            inputCard.suit > 3
+        ) {
+            throw new TressetteGameEngineError('INVALID_CARD', 'invalid card payload', 400)
+        }
+
+        try {
+            return new Card3s7(inputCard.suit, inputCard.value)
+        } catch (_error: unknown) {
+            throw new TressetteGameEngineError('INVALID_CARD', 'invalid card payload', 400)
+        }
+    }
+
+    private toPlainCard(card: Card3s7): TressetteCard {
+        return {
+            suit: card.suit,
+            value: card.value
+        }
+    }
+
+    private nextTurnIndex(currentTurnIndex: number): number {
+        return (currentTurnIndex + 1) % TURN_ORDER.length
     }
 
     private toEnginePosition(position: TressettePosition): Position3s74i {
@@ -113,3 +276,4 @@ class TressetteGameEngineAdapter {
 }
 
 export const tressetteGameEngineAdapter = new TressetteGameEngineAdapter()
+
