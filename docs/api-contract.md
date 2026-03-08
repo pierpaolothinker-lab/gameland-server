@@ -119,7 +119,7 @@ Connection is initialized on backend server startup.
   - Behavior: server broadcasts to other clients
 
 ## Tressette MVP Contract (partial)
-Status: `PARTIALLY_IMPLEMENTED` (HTTP endpoints create/join/leave/start/get and Socket.IO table events are implemented; gameplay events remain partial)
+Status: `PARTIALLY_IMPLEMENTED` (HTTP endpoints create/join/leave/start/get and Socket.IO table events are implemented; play-card baseline is integrated with engine, full gameplay flow remains partial)
 
 ### Table model (logical)
 - `tableId: string`
@@ -134,15 +134,13 @@ Client -> server:
 - `tressette:join-table` payload `{ tableId, username, position }`
 - `tressette:leave-table` payload `{ tableId, username }`
 - `tressette:start-game` payload `{ tableId, username }`
-- `tressette:play-card` payload `{ tableId, ... }` (accepted but gameplay flow not implemented)
+- `tressette:play-card` payload `{ tableId, username }`
 
 Server -> client:
-- `tressette:table-updated` emitted to room `tressette:table:{tableId}` on join/leave/start
+- `tressette:table-updated` emitted to room `tressette:table:{tableId}` on join/leave/start/play-card
 - `tressette:hand-started` emitted on successful start-game
+- `tressette:trick-played` emitted on successful play-card with payload `{ tableId, winner, nextPlayer, tricksPlayed, status }`
 - `tressette:error` emitted with contract error payload on validation/domain failures
-
-Current limitation:
-- `tressette:play-card` currently responds with `NOT_IMPLEMENTED` via `tressette:error`.
 
 ## Data conventions
 - Content type: `application/json`
@@ -173,6 +171,10 @@ Current limitation:
 - `TABLE_ALREADY_STARTED` -> start requested after game start (`409`)
 - `TABLE_NOT_JOINABLE` -> join after game start (`409`)
 - `TABLE_NOT_LEAVABLE` -> leave after game start (`409`)
+- `TABLE_NOT_IN_GAME` -> play-card attempted when table is not in_game (`409`)
+- `ENGINE_NOT_INITIALIZED` -> start not initialized or missing runtime engine session (`409`)
+- `NOT_PLAYER_TURN` -> play-card by player not in turn (`409`)
+- `HAND_ALREADY_COMPLETED` -> play-card attempted after hand completed (`409`)
 
 ## Mock Auth Session (dev only)
 This project does not implement real authentication in this scope (no JWT/session provider).

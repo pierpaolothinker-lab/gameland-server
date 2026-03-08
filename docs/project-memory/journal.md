@@ -24,3 +24,13 @@
 - [2026-03-08 01:55] Merged mock-auth session into dev; closed obsolete lobby PR; synchronized local dev branches
 - Repo: root
 - Branch: dev
+
+## 2026-03-08
+- [2026-03-08 04:38] Documented Render deployment baseline and clarified roadmap while FE/BE Task 8 is in progress
+- Repo: root
+- Branch: dev-task8-engine-integration
+
+## 2026-03-08
+- [2026-03-08 04:43] Task 8 FE/BE outputs received: engine-driven start/play-card baseline implemented on dedicated branches and validated
+- Repo: root
+- Branch: dev-task8-engine-integration

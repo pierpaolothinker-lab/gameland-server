@@ -1,4 +1,4 @@
-﻿export const TRESSETTE_POSITIONS = ['SUD', 'NORD', 'EST', 'OVEST'] as const
+export const TRESSETTE_POSITIONS = ['SUD', 'NORD', 'EST', 'OVEST'] as const
 
 export type TressettePosition = (typeof TRESSETTE_POSITIONS)[number]
 
@@ -41,4 +41,16 @@ export type LeaveTressetteTableInput = {
 export type StartTressetteGameInput = {
     tableId: string
     username: string
+}
+
+export type PlayCardTressetteInput = {
+    tableId: string
+    username: string
+}
+
+export type TressettePlayCardOutcome = {
+    winner: string
+    nextPlayer: string
+    tricksPlayed: number
+    nextStatus: TressetteTableStatus
 }
