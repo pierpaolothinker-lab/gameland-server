@@ -129,7 +129,7 @@ Status: `PARTIALLY_IMPLEMENTED` (HTTP endpoints create/join/leave/start/get are 
 - `points: { teamSN: number, teamEO: number }`
 - `status: "waiting" | "in_game" | "ended"`
 
-### Tressette Socket.IO events (current)
+### Tressette Socket.IO events (current)`r`nTurn order semantics (4 Incrociato, server-authoritative): `SUD -> EST -> NORD -> OVEST -> SUD` (example case covered: `Paolo -> Marta`).
 Client -> server:
 - `tressette:join-table` payload `{ tableId, username, position }`
 - `tressette:leave-table` payload `{ tableId, username }`
@@ -141,6 +141,7 @@ Server -> client:
 - `tressette:table-updated` emitted to room `tressette:table:{tableId}` on join/leave/start/play-card.
 - `tressette:hand-started` emitted on successful start-game (triggered by socket start event or HTTP `/tables/:tableId/start` when realtime server is active).
 - `tressette:turn-started` emitted immediately after hand-started and then at each turn start with payload `{ tableId, trickNumber, currentPlayer, turnDeadlineMs, secondsRemaining, timeoutSeconds }`.
+  - Timeout is fixed at 20s; when expired server performs autoplay with a random playable card.
 - `tressette:turn-updated` emitted every second during active turn countdown with payload `{ tableId, trickNumber, currentPlayer, turnDeadlineMs, secondsRemaining, timeoutSeconds }`.
 - `tressette:card-played` emitted on each accepted play with payload `{ tableId, trickNumber, username, card, source }` (includes `source: "timeout_auto"` when autoplay is triggered by timer expiry).
   - `source` is `"manual"` or `"timeout_auto"`.
@@ -206,6 +207,8 @@ When backend changes any endpoint/payload/event:
 1. Update this file in the same PR/commit.
 2. Add a short "Contract changes" section in commit/PR notes.
 3. Notify frontend thread with exact changed paths and examples.
+
+
 
 
 
