@@ -1,6 +1,6 @@
-﻿# Gameland API Contract
+# Gameland API Contract
 
-Last updated: 2026-03-07
+Last updated: 2026-03-08
 Source of truth: backend (`gameland-server`)
 
 ## Purpose
@@ -47,6 +47,7 @@ This baseline is effective for all implementation threads until explicitly chang
 { "owner": "PlayerName" }
 ```
 
+- Validation: `owner` is required, trimmed, non-empty, max 32 chars.
 - Response `201`:
 
 ```json
@@ -69,6 +70,7 @@ This baseline is effective for all implementation threads until explicitly chang
 { "username": "PlayerName", "position": "NORD" }
 ```
 
+- Validation: `username` is required, trimmed, non-empty, max 32 chars.
 - Response `200`: table snapshot updated.
 
 ### Tressette - Leave table
@@ -127,7 +129,6 @@ Status: `PARTIALLY_IMPLEMENTED` (HTTP endpoints create/join/leave/start/get and 
 - `points: { teamSN: number, teamEO: number }`
 - `status: "waiting" | "in_game" | "ended"`
 
-
 ### Tressette Socket.IO events (current)
 Client -> server:
 - `tressette:join-table` payload `{ tableId, username, position }`
@@ -142,6 +143,7 @@ Server -> client:
 
 Current limitation:
 - `tressette:play-card` currently responds with `NOT_IMPLEMENTED` via `tressette:error`.
+
 ## Data conventions
 - Content type: `application/json`
 - IDs: strings
@@ -172,10 +174,26 @@ Current limitation:
 - `TABLE_NOT_JOINABLE` -> join after game start (`409`)
 - `TABLE_NOT_LEAVABLE` -> leave after game start (`409`)
 
+## Mock Auth Session (dev only)
+This project does not implement real authentication in this scope (no JWT/session provider).
+
+Current temporary behavior for frontend mock logged-user UX:
+- FE may keep sending `owner`/`username` in HTTP payloads.
+- Backend validates usernames with minimal robust rules:
+  - required
+  - trim applied
+  - non-empty after trim
+  - max length 32
+- Optional header `x-mock-username` is supported only in non-production runtime (`NODE_ENV !== "production"`).
+  - If present and valid, it overrides body `owner`/`username` for create/join.
+  - If invalid, backend returns `400` with contract error payload (`VALIDATION_ERROR`).
+- In production, `x-mock-username` is ignored and body fields are used.
+
+Out of scope for this task:
+- Real auth, JWT, refresh tokens, identity provider integration.
+
 ## Change policy
 When backend changes any endpoint/payload/event:
 1. Update this file in the same PR/commit.
 2. Add a short "Contract changes" section in commit/PR notes.
 3. Notify frontend thread with exact changed paths and examples.
-
-

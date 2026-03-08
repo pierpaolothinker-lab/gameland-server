@@ -1,4 +1,4 @@
-﻿import { AddressInfo } from 'net'
+import { AddressInfo } from 'net'
 import { createServer, Server } from 'http'
 import app from '../../../src/app'
 import { tressetteTableStore } from '../../../src/tressette/tressette-table.store'
@@ -60,6 +60,23 @@ describe('Tressette table HTTP API', () => {
         })
     })
 
+    test('returns validation error when owner is too long', async () => {
+        const response = await fetch(`${baseUrl}/api/tressette/tables`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ owner: 'A'.repeat(33) })
+        })
+
+        expect(response.status).toBe(400)
+        const body = await response.json()
+        expect(body).toEqual({
+            error: {
+                code: 'VALIDATION_ERROR',
+                message: 'owner must be at most 32 characters'
+            }
+        })
+    })
+
     test('join/get/start flow works for full table', async () => {
         const createResponse = await fetch(`${baseUrl}/api/tressette/tables`, {
             method: 'POST',
@@ -108,6 +125,83 @@ describe('Tressette table HTTP API', () => {
         expect(startResponse.status).toBe(200)
         const started = await startResponse.json()
         expect(started.status).toBe('in_game')
+    })
+
+    test('returns validation error when join username is only spaces', async () => {
+        const createResponse = await fetch(`${baseUrl}/api/tressette/tables`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ owner: 'Pierpaolo' })
+        })
+        const createdTable = await createResponse.json()
+
+        const response = await fetch(`${baseUrl}/api/tressette/tables/${createdTable.tableId}/join`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: '   ', position: 'NORD' })
+        })
+
+        expect(response.status).toBe(400)
+        const body = await response.json()
+        expect(body).toEqual({
+            error: {
+                code: 'VALIDATION_ERROR',
+                message: 'username is required'
+            }
+        })
+    })
+
+    test('x-mock-username overrides create owner in non-production', async () => {
+        const previousNodeEnv = process.env.NODE_ENV
+        process.env.NODE_ENV = 'development'
+
+        try {
+            const response = await fetch(`${baseUrl}/api/tressette/tables`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-mock-username': 'MockUser'
+                },
+                body: JSON.stringify({ owner: 'BodyUser' })
+            })
+
+            expect(response.status).toBe(201)
+            const body = await response.json()
+            expect(body.owner).toBe('MockUser')
+            expect(body.players[0].username).toBe('MockUser')
+        } finally {
+            process.env.NODE_ENV = previousNodeEnv
+        }
+    })
+
+    test('x-mock-username overrides join username in non-production', async () => {
+        const createResponse = await fetch(`${baseUrl}/api/tressette/tables`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ owner: 'Pierpaolo' })
+        })
+        const createdTable = await createResponse.json()
+
+        const previousNodeEnv = process.env.NODE_ENV
+        process.env.NODE_ENV = 'development'
+
+        try {
+            const response = await fetch(`${baseUrl}/api/tressette/tables/${createdTable.tableId}/join`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-mock-username': 'HeaderUser'
+                },
+                body: JSON.stringify({ username: 'BodyUser', position: 'NORD' })
+            })
+
+            expect(response.status).toBe(200)
+            const table = await response.json()
+            expect(table.players.some((x: { username: string }) => x.username === 'HeaderUser')).toBe(true)
+            expect(table.players.some((x: { username: string }) => x.username === 'BodyUser')).toBe(false)
+        } finally {
+            process.env.NODE_ENV = previousNodeEnv
+        }
     })
 
     test('leave removes non-owner player from waiting table', async () => {
