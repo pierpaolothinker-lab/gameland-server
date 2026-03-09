@@ -44,3 +44,7 @@ For each cycle:
 - A new branch is exceptional and requires explicit governance approval.
 - Standard flow: continue current branch -> PR to dev -> merge after checks -> delete branch.
 
+
+## Documentation Commit Rule
+- Planner/memory updates are part of deliverable state and must be committed (separate docs commit allowed) before PR, unless explicitly excluded by user.
+

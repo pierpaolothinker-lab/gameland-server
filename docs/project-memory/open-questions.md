@@ -15,3 +15,5 @@
 - Do we enforce CODEOWNERS for FE/BE review ownership?
 - Should planner board sync run at every task state transition (`new-task`, `in-progress`, `ready-for-review`, `merged`) or only on scheduled cycles?
 
+
+- During pre-game countdown, should all user actions be hard-blocked client-side and server-side, or do we allow limited non-gameplay interactions?

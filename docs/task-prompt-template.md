@@ -59,3 +59,8 @@ Default: continue on the currently open task branch until task closure is valida
 7. Delete the task branch (local + remote) immediately after merge.
 
 No direct implementation on dev except integration/cleanup operations explicitly approved in governance thread.
+
+## Documentation hygiene (mandatory)
+- If task touched governance/planner memory files (docs/project-memory/*, scripts/project-management/examples/payload.current.json), commit them in the same branch before handoff.
+- Do not leave docs/memory updates uncommitted unless user explicitly asks to ignore them.
+

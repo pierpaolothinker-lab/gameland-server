@@ -1,4 +1,4 @@
-﻿# Implementation Log
+# Implementation Log
 
 ## 2026-03-08 - Governance and delivery model
 - Added `dev` branch in both repos and pushed it to origin.
@@ -95,7 +95,8 @@
 - Repo: root
 - Branch: codex/dev-follow-suit-validation-be
 - Summary: Planner checkpoint new-task: avvio parallelo P1 BE follow-suit validation e P1 FE playable-cards guard (UI + backend error handling)
-- Validation: branch kickoff captured for server/app; board payload regenerated for 2-item upsert with In Progress target- Risks/Notes: Parallel FE/BE delivery requires strict contract sync on follow-suit errors and playable-card rules to avoid UX/backend drift.
+- Validation: branch kickoff captured for server/app; board payload regenerated for 2-item upsert with In Progress target
+- Risks/Notes: Parallel FE/BE delivery requires strict contract sync on follow-suit errors and playable-card rules to avoid UX/backend drift.
 
 
 ## 2026-03-09 10:36 - follow-suit-validation-be
@@ -108,7 +109,8 @@
 - Repo: root
 - Branch: dev
 - Summary: Task follow-suit closed: FE playable-cards guard + BE server-authoritative follow-suit validation merged to dev (app PR #4, server PR #6), GUI validated, post-merge branch cleanup completed
-- Validation: PR #4 app merged to dev; PR #6 server merged to dev; GUI validation passed; local/remote feature branches removed; both repos now main+dev only and dev aligned- Risks/Notes: No blocking risk on closed task; residual product decisions remain on observer mode and reconnect policy.
+- Validation: PR #4 app merged to dev; PR #6 server merged to dev; GUI validation passed; local/remote feature branches removed; both repos now main+dev only and dev aligned
+- Risks/Notes: No blocking risk on closed task; residual product decisions remain on observer mode and reconnect policy.
 
 
 ## 2026-03-09 11:34 - scoreboard-multihand-ui-fe
@@ -116,3 +118,12 @@
 - Branch: codex/dev-multi-hand-runtime-be
 - Summary: FE gameplay: scoreboard prominente SN/EO + transizione multi-mano con hand-start/hand-end e update realtime punti; fix mapping INVALID_SUIT_RESPONSE e copertura test component su scoreboard/multihand/follow-suit
 - Validation: npm run build -- --configuration development; npm run test -- --watch=false --browsers=ChromeHeadlessNoSandbox (42 success)
+
+## 2026-03-09 19:09 - checkpoint-new-task-pregame-countdown-5s
+- Repo: root
+- Branch: codex/dev-pregame-countdown-be
+- Summary: Planner checkpoint new-task: opened parallel P1 tasks for pre-game countdown 5s (BE server-authoritative + FE overlay/input lock) and prepared board upsert
+- Validation: branch evaluation captured for BE/FE; payload regenerated with allowed status set and title-based upsert intent
+- Risks/Notes: Requires strict FE/BE contract alignment for countdown events and play-card lock errors to prevent race conditions at game start.
+
+
