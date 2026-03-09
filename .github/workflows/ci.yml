@@ -1,4 +1,4 @@
-﻿name: Server CI
+name: Server CI
 
 on:
   pull_request:
@@ -28,3 +28,4 @@ jobs:
 
       - name: Run Tressette HTTP tests
         run: npm test -- tests/unit-tests/http/tressette.create-table.test.ts --runInBand
+
