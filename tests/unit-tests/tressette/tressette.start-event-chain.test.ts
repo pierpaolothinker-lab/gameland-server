@@ -3,10 +3,41 @@ import { AddressInfo } from 'net'
 import { createServer, Server as HttpServer } from 'http'
 import { Server as IoServer } from 'socket.io'
 import app from '../../../src/app'
-import { createIo, TURN_TIMEOUT_SECONDS } from '../../../src/sockets'
+import { createIo, resolveTurnTimeoutSeconds, TURN_TIMEOUT_SECONDS } from '../../../src/sockets'
 import { tressetteTableStore } from '../../../src/tressette/tressette-table.store'
 import { resetStoresForTests } from '../../../src/tressette/tressette-mode.store'
 import { clearStartPipelineDispatcher } from '../../../src/tressette/tressette-start.pipeline'
+
+describe('turn timeout defaults', () => {
+    const previousNodeEnv = process.env.NODE_ENV
+    const previousTimeoutEnv = process.env.TRESSETTE_TURN_TIMEOUT_SECONDS
+
+    afterEach(() => {
+        process.env.NODE_ENV = previousNodeEnv
+        process.env.TRESSETTE_TURN_TIMEOUT_SECONDS = previousTimeoutEnv
+    })
+
+    test('non-production default timeout is 5 seconds', () => {
+        process.env.NODE_ENV = 'development'
+        delete process.env.TRESSETTE_TURN_TIMEOUT_SECONDS
+
+        expect(resolveTurnTimeoutSeconds()).toBe(5)
+    })
+
+    test('production default timeout is 20 seconds', () => {
+        process.env.NODE_ENV = 'production'
+        delete process.env.TRESSETTE_TURN_TIMEOUT_SECONDS
+
+        expect(resolveTurnTimeoutSeconds()).toBe(20)
+    })
+
+    test('env timeout override wins when valid', () => {
+        process.env.NODE_ENV = 'development'
+        process.env.TRESSETTE_TURN_TIMEOUT_SECONDS = '9'
+
+        expect(resolveTurnTimeoutSeconds()).toBe(9)
+    })
+})
 
 describe('Tressette start event chain', () => {
     let server: HttpServer
@@ -91,12 +122,14 @@ describe('Tressette start event chain', () => {
             )
             expect(typeof turnStarted.turnDeadlineMs).toBe('number')
             expect(turnStarted.turnDeadlineMs).toBeGreaterThan(Date.now())
+            expect(turnStarted.myHand).toBeNull()
 
             const turnUpdated = emitted[turnUpdatedIdx].payload
             expect(turnUpdated.tableId).toBe(created.tableId)
             expect(turnUpdated.currentPlayer.username).toBe(turnStarted.currentPlayer.username)
             expect(turnUpdated.timeoutSeconds).toBe(TURN_TIMEOUT_SECONDS)
             expect(typeof turnUpdated.secondsRemaining).toBe('number')
+            expect(turnUpdated.myHand).toBeNull()
 
             expect(timeoutSpy).toHaveBeenCalledWith(expect.any(Function), TURN_TIMEOUT_SECONDS * 1000)
             expect(intervalSpy).toHaveBeenCalledWith(expect.any(Function), 1000)
@@ -163,5 +196,125 @@ describe('Tressette start event chain', () => {
             toSpy.mockRestore()
         }
     })
+
+    test('timeout autoplay emits private player-state with coherent hand and trick reset', async () => {
+        const created = tressetteTableStore.create({ owner: 'Pierpaolo' })
+        tressetteTableStore.join({ tableId: created.tableId, username: 'Vito', position: 'NORD' })
+        tressetteTableStore.join({ tableId: created.tableId, username: 'Tonino', position: 'EST' })
+        tressetteTableStore.join({ tableId: created.tableId, username: 'Paolo', position: 'OVEST' })
+
+        const emitted: Array<{ event: string, payload: any }> = []
+        const scheduledCallbacks: Array<() => void> = []
+
+        const toSpy = jest.spyOn(io, 'to').mockImplementation((_room: string) => {
+            return {
+                emit: (event: string, payload: any) => {
+                    emitted.push({ event, payload })
+                }
+            } as any
+        })
+
+        const timeoutSpy = jest.spyOn(global, 'setTimeout').mockImplementation(((callback: TimerHandler) => {
+            scheduledCallbacks.push(callback as () => void)
+            return { mocked: true } as any
+        }) as typeof setTimeout)
+
+        const intervalSpy = jest.spyOn(global, 'setInterval').mockImplementation(((..._args: any[]) => {
+            return { mockedInterval: true } as any
+        }) as typeof setInterval)
+
+        const roomName = `tressette:table:live:${created.tableId}`
+        const fakeSocket = {
+            data: {
+                __tressetteTableUsers: new Map<string, string>([[`live:${created.tableId}`, 'Pierpaolo']])
+            },
+            emit: jest.fn()
+        }
+
+        ;(io.sockets.adapter.rooms as unknown as Map<string, Set<string>>).set(roomName, new Set(['fake-watcher']))
+        ;(io.sockets.sockets as unknown as Map<string, any>).set('fake-watcher', fakeSocket)
+
+        try {
+            const response = await fetch(`${baseUrl}/api/tressette/tables/${created.tableId}/start?mode=live`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username: 'Pierpaolo' })
+            })
+
+            expect(response.status).toBe(200)
+            expect(scheduledCallbacks.length).toBeGreaterThan(0)
+
+            scheduledCallbacks[0]()
+
+            const firstCardPlayed = emitted.find((entry) => entry.event === 'tressette:card-played')
+            expect(firstCardPlayed).toBeDefined()
+
+            const privateStatesAfterFirstPlay = fakeSocket.emit.mock.calls
+                .filter((entry: any[]) => entry[0] === 'tressette:player-state')
+                .map((entry: any[]) => entry[1])
+            expect(privateStatesAfterFirstPlay.length).toBeGreaterThan(0)
+
+            const firstPrivateState = privateStatesAfterFirstPlay[privateStatesAfterFirstPlay.length - 1]
+            expect(firstPrivateState.myHand).toEqual(expect.any(Array))
+            expect(firstPrivateState.currentTrick).toEqual(expect.any(Array))
+            expect(firstPrivateState.currentTurn).toEqual(expect.objectContaining({ username: expect.any(String) }))
+            expect(firstPrivateState.lastCompletedTrick).toBeUndefined()
+            expect(firstPrivateState.myHand.some((card: { suit: number, value: number }) => (
+                card.suit === firstCardPlayed?.payload.card.suit && card.value === firstCardPlayed?.payload.card.value
+            ))).toBe(false)
+
+            for (let i = 1; i < 4; i++) {
+                const cb = scheduledCallbacks[i]
+                expect(cb).toBeDefined()
+                cb()
+            }
+
+            const allPrivateStates = fakeSocket.emit.mock.calls
+                .filter((entry: any[]) => entry[0] === 'tressette:player-state')
+                .map((entry: any[]) => entry[1])
+            expect(allPrivateStates.length).toBeGreaterThanOrEqual(4)
+
+            const lastPrivateState = allPrivateStates[allPrivateStates.length - 1]
+            expect(lastPrivateState.currentTrick).toEqual([])
+            expect(lastPrivateState.currentTurn).toEqual(
+                expect.objectContaining({
+                    username: expect.any(String)
+                })
+            )
+            expect(lastPrivateState.lastCompletedTrick).toEqual(expect.any(Array))
+            expect(lastPrivateState.lastCompletedTrick).toHaveLength(4)
+            expect(lastPrivateState.lastTrickWinner).toEqual(expect.any(String))
+            expect(lastPrivateState.lastTrickWinnerPosition).toEqual(expect.any(String))
+
+            const trickEndedEvent = emitted.find((entry) => entry.event === 'tressette:trick-ended')
+            expect(trickEndedEvent).toBeDefined()
+            expect(trickEndedEvent?.payload).toEqual(
+                expect.objectContaining({
+                    tableId: created.tableId,
+                    winner: expect.any(String),
+                    winnerPosition: expect.any(String),
+                    trickCards: expect.any(Array)
+                })
+            )
+            expect(trickEndedEvent?.payload.trickCards).toHaveLength(4)
+
+            const roomTurnPayloads = emitted
+                .filter((entry) => entry.event === 'tressette:turn-started' || entry.event === 'tressette:turn-updated')
+                .map((entry) => entry.payload)
+            expect(roomTurnPayloads.every((payload) => payload.myHand === null)).toBe(true)
+
+            const roomCardPlayedPayloads = emitted
+                .filter((entry) => entry.event === 'tressette:card-played' || entry.event === 'tressette:trick-ended')
+                .map((entry) => entry.payload)
+            expect(roomCardPlayedPayloads.every((payload) => payload.myHand === undefined)).toBe(true)
+        } finally {
+            ;(io.sockets.adapter.rooms as unknown as Map<string, Set<string>>).delete(roomName)
+            ;(io.sockets.sockets as unknown as Map<string, any>).delete('fake-watcher')
+            intervalSpy.mockRestore()
+            timeoutSpy.mockRestore()
+            toSpy.mockRestore()
+        }
+    })
 })
+
 
