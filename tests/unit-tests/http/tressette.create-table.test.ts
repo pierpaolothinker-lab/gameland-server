@@ -125,7 +125,7 @@ describe('Tressette table HTTP API', () => {
 
         expect(startResponse.status).toBe(200)
         const started = await startResponse.json()
-        expect(started.status).toBe('in_game')
+        expect(started.status).toBe('starting')
     })
 
     test('start fails when table is not complete', async () => {
@@ -436,5 +436,6 @@ describe('Tressette table HTTP API', () => {
         })
     })
 })
+
 
 

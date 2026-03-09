@@ -132,6 +132,17 @@ export class TressetteTableStore {
             throw new TressetteStoreError('TABLE_ALREADY_STARTED', 'game already started', 409)
         }
 
+        table.status = 'starting'
+        return this.clone(table)
+    }
+
+    activateStartedGame(tableId: string): TressetteTable {
+        const table = this.requireTable(tableId)
+
+        if (table.status !== 'starting') {
+            throw new TressetteStoreError('TABLE_NOT_STARTING', 'table is not in pre-game countdown', 409)
+        }
+
         try {
             this.engineAdapter.initialize(this.clone(table))
         } catch (error: unknown) {
@@ -188,6 +199,10 @@ export class TressetteTableStore {
 
     playCard(input: PlayCardTressetteInput): TressettePlayCardStoreResult {
         const table = this.requireTable(input.tableId)
+
+        if (table.status === 'starting') {
+            throw new TressetteStoreError('GAME_STARTING', 'game countdown in progress', 409)
+        }
 
         if (table.status !== 'in_game') {
             throw new TressetteStoreError('TABLE_NOT_IN_GAME', 'table is not in game', 409)
@@ -256,15 +271,18 @@ export class TressetteTableStore {
         switch (status) {
             case 'waiting':
                 return 0
-            case 'in_game':
+            case 'starting':
                 return 1
-            case 'ended':
+            case 'in_game':
                 return 2
-            default:
+            case 'ended':
                 return 3
+            default:
+                return 4
         }
     }
 }
 
 export const tressetteTableStore = new TressetteTableStore()
+
 

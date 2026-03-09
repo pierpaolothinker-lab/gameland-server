@@ -111,6 +111,18 @@ export const resolveTrickRevealMs = (): number => {
     return 2000
 }
 export const TRICK_REVEAL_MS = resolveTrickRevealMs()
+export const resolvePregameCountdownSeconds = (): number => {
+    const raw = process.env.TRESSETTE_PREGAME_COUNTDOWN_SECONDS
+    if (raw) {
+        const parsed = Number(raw)
+        if (Number.isInteger(parsed) && parsed >= 0) {
+            return parsed
+        }
+    }
+
+    return 5
+}
+export const PREGAME_COUNTDOWN_SECONDS = resolvePregameCountdownSeconds()
 
 const ALLOWED_SOCKET_ORIGINS = ['http://localhost:4200', 'http://localhost:4400', 'http://localhost:8100']
 
@@ -388,7 +400,7 @@ const debugStartPipeline = (
     })
 }
 
-const getTableStatusSafe = (mode: TressetteMode, tableId: string): 'waiting' | 'in_game' | 'ended' | null => {
+const getTableStatusSafe = (mode: TressetteMode, tableId: string): 'waiting' | 'starting' | 'in_game' | 'ended' | null => {
     try {
         return getStoreForMode(mode).getById(tableId).status
     } catch (_error: unknown) {
@@ -418,6 +430,7 @@ export const createIo = (server: http.Server) => {
     const turnTimeouts = new Map<string, NodeJS.Timeout>()
     const turnTickers = new Map<string, NodeJS.Timeout>()
     const turnStartDelays = new Map<string, NodeJS.Timeout>()
+    const pregameCountdowns = new Map<string, NodeJS.Timeout>()
     const turnDeadlines = new Map<string, number>()
     const lastCompletedTrickByTable = new Map<string, LastCompletedTrickMetadata>()
 
@@ -452,6 +465,17 @@ export const createIo = (server: http.Server) => {
 
         clearTimeout(existing)
         turnStartDelays.delete(key)
+    }
+
+    const clearPregameCountdown = (mode: TressetteMode, tableId: string) => {
+        const key = turnKey(mode, tableId)
+        const existing = pregameCountdowns.get(key)
+        if (!existing) {
+            return
+        }
+
+        clearInterval(existing)
+        pregameCountdowns.delete(key)
     }
 
     const emitPerUserStateRefresh = (mode: TressetteMode, tableId: string, clearRevealMetadata = false) => {
@@ -673,27 +697,84 @@ export const createIo = (server: http.Server) => {
 
     const emitStartPipeline = (context: StartPipelineContext) => {
         const table = context.table
+        const key = turnKey(context.mode, table.tableId)
+
+        clearTurnTimeout(context.mode, table.tableId)
+        clearTurnTicker(context.mode, table.tableId)
+        clearTurnStartDelay(context.mode, table.tableId)
+        clearPregameCountdown(context.mode, table.tableId)
+        turnDeadlines.delete(key)
 
         io.to(tableRoom(context.mode, table.tableId)).emit('tressette:table-updated', {
             ...table,
             mode: context.mode,
-            currentTrick: readCurrentTrickSafe(context.mode, table.tableId)
-        })
-        io.to(tableRoom(context.mode, table.tableId)).emit('tressette:hand-started', {
-            tableId: table.tableId,
-            mode: context.mode,
-            status: table.status,
-            handNumber: 1
+            currentTrick: []
         })
 
-        const currentTurn = getStoreForMode(context.mode).getCurrentTurn(table.tableId)
-        if (!currentTurn) {
-            debugStartPipeline(context, null, null)
+        const finalizeStart = () => {
+            pregameCountdowns.delete(key)
+
+            let startedTable: TressetteTable
+            try {
+                startedTable = getStoreForMode(context.mode).activateStartedGame(table.tableId)
+            } catch (error: unknown) {
+                emitStoreErrorToRoom(io, context.mode, table.tableId, error)
+                return
+            }
+
+            io.to(tableRoom(context.mode, startedTable.tableId)).emit('tressette:table-updated', {
+                ...startedTable,
+                mode: context.mode,
+                currentTrick: readCurrentTrickSafe(context.mode, startedTable.tableId)
+            })
+
+            io.to(tableRoom(context.mode, startedTable.tableId)).emit('tressette:hand-started', {
+                tableId: startedTable.tableId,
+                mode: context.mode,
+                status: startedTable.status,
+                handNumber: 1
+            })
+
+            const currentTurn = getStoreForMode(context.mode).getCurrentTurn(startedTable.tableId)
+            if (!currentTurn) {
+                debugStartPipeline(context, null, null)
+                return
+            }
+
+            const deadlineMs = emitTurnStarted(context.mode, startedTable, currentTurn)
+            emitPerUserStateRefresh(context.mode, startedTable.tableId)
+            debugStartPipeline(context, currentTurn.turnPlayer, deadlineMs)
+        }
+
+        let secondsRemaining = PREGAME_COUNTDOWN_SECONDS
+        io.to(tableRoom(context.mode, table.tableId)).emit('tressette:game-start-countdown', {
+            tableId: table.tableId,
+            mode: context.mode,
+            secondsRemaining,
+            status: table.status
+        })
+
+        if (secondsRemaining <= 0) {
+            finalizeStart()
             return
         }
 
-        const deadlineMs = emitTurnStarted(context.mode, table, currentTurn)
-        debugStartPipeline(context, currentTurn.turnPlayer, deadlineMs)
+        const countdownInterval = setInterval(() => {
+            secondsRemaining -= 1
+            io.to(tableRoom(context.mode, table.tableId)).emit('tressette:game-start-countdown', {
+                tableId: table.tableId,
+                mode: context.mode,
+                secondsRemaining,
+                status: 'starting'
+            })
+
+            if (secondsRemaining <= 0) {
+                clearPregameCountdown(context.mode, table.tableId)
+                finalizeStart()
+            }
+        }, 1000)
+
+        pregameCountdowns.set(key, countdownInterval)
     }
 
     registerStartPipelineDispatcher(emitStartPipeline)

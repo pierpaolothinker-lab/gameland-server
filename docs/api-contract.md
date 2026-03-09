@@ -62,7 +62,7 @@ This document defines the integration contract between backend (`gameland-server
   - only owner can start (`FORBIDDEN_START`, `403`)
   - table must be complete (`4/4`) (`TABLE_NOT_COMPLETE`, `409`)
   - table status must be `waiting` (`TABLE_ALREADY_STARTED`, `409`)
-- `200` -> table snapshot with `status: "in_game"`
+- `200` -> table snapshot with `status: "starting"` (pre-game countdown active)
 - `404` -> `TABLE_NOT_FOUND`
 
 ## Socket.IO events
@@ -82,6 +82,7 @@ Client -> server:
 Server -> client:
 - `tressette:mode-selected`
 - `tressette:table-updated` (including immediate snapshot on `tressette:watch-table`) with `{ ...table, mode, currentTrick }`
+- `tressette:game-start-countdown` `{ tableId, mode, secondsRemaining, status }` emitted at `5,4,3,2,1,0` by default (configurable)
 - `tressette:hand-started` `{ tableId, mode, status, handNumber }`
 - `tressette:turn-started` `{ tableId, mode, trickNumber, currentPlayer, currentTrick, myHand, turnDeadlineMs, secondsRemaining, timeoutSeconds }` (`myHand` is always `null` in room broadcast)
 - `tressette:turn-updated` `{ tableId, mode, trickNumber, currentPlayer, currentTrick, myHand, turnDeadlineMs, secondsRemaining, timeoutSeconds }` (`myHand` is always `null` in room broadcast)
@@ -91,6 +92,12 @@ Server -> client:
 - `tressette:player-state` `{ tableId, mode, currentTrick, myHand }` emitted per-user after each play (manual/timeout_auto) to keep hand/trick authoritative and in sync.
 - `tressette:trick-ended` `{ tableId, mode, trickNumber, winner, winnerPosition, trickCards, trickPoints, scoreSN, scoreEO }` (use `trickCards` for reveal window before FE clears center)
 - `tressette:error`
+
+### Start sequence (server-authoritative)
+1. `POST /start` returns table snapshot with `status: "starting"`.
+2. Server emits `tressette:game-start-countdown` every second (`5 -> 0` by default).
+3. At `0`, server initializes hand/engine, sets status `in_game`, then emits `tressette:table-updated`, `tressette:hand-started`, `tressette:turn-started`.
+4. Turn timeout starts only after `turn-started`.
 
 ### Trick reveal window
 - After `tressette:trick-ended`, server delays next `tressette:turn-started` by a reveal window.
@@ -110,7 +117,7 @@ Server -> client:
 - `players: `Array<{ username: string, position: "SUD" | "NORD" | "EST" | "OVEST" }>`
 - `isComplete: boolean`
 - `points: { teamSN: number, teamEO: number }`
-- `status: "waiting" | "in_game" | "ended"`
+- `status: "waiting" | "starting" | "in_game" | "ended"`
 
 ## Error payload
 ```json
@@ -142,10 +149,14 @@ Server -> client:
 - `CARD_NOT_OWNED` (`409`)
 - `INVALID_SUIT_RESPONSE` (`409`)
 - `HAND_ALREADY_COMPLETED` (`409`)
+- `GAME_STARTING` (`409`)
+- `TABLE_NOT_STARTING` (`409`)
 
 ## Change policy
 When backend changes any endpoint/payload/event:
 1. Update this file in the same PR/commit.
 2. Add a short "Contract changes" section in PR notes.
 3. Notify frontend thread with exact changed payload examples.
+
+
 

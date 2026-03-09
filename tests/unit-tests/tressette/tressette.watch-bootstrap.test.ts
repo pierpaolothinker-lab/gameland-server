@@ -14,6 +14,7 @@ describe('Tressette watch-table bootstrap', () => {
         store.join({ tableId: created.tableId, username: 'Tonino', position: 'EST' })
         store.join({ tableId: created.tableId, username: 'Paolo', position: 'OVEST' })
         store.start({ tableId: created.tableId, username: 'Pierpaolo' })
+        store.activateStartedGame(created.tableId)
 
         const turnDeadlines = new Map<string, number>([[`live:${created.tableId}`, Date.now() + TURN_TIMEOUT_SECONDS * 1000]])
         const socket = {
@@ -102,6 +103,7 @@ describe('Tressette watch-table bootstrap', () => {
         store.join({ tableId: created.tableId, username: 'Tonino', position: 'EST' })
         store.join({ tableId: created.tableId, username: 'Paolo', position: 'OVEST' })
         store.start({ tableId: created.tableId, username: 'Pierpaolo' })
+        store.activateStartedGame(created.tableId)
 
         const timeoutSpy = jest.spyOn(global, 'setTimeout')
         const intervalSpy = jest.spyOn(global, 'setInterval')
@@ -122,4 +124,5 @@ describe('Tressette watch-table bootstrap', () => {
         }
     })
 })
+
 
