@@ -17,6 +17,22 @@ const setupStartedTable = () => {
     }
 }
 
+
+const findPlayableSuitConstraint = (
+    leaderHand: Array<{ suit: number, value: number }>,
+    responderHand: Array<{ suit: number, value: number }>
+) => {
+    for (const leadCard of leaderHand) {
+        const sameSuitCard = responderHand.find((card) => card.suit === leadCard.suit)
+        const offSuitCard = responderHand.find((card) => card.suit !== leadCard.suit)
+        if (sameSuitCard && offSuitCard) {
+            return { leadCard, sameSuitCard, offSuitCard }
+        }
+    }
+
+    return null
+}
+
 describe('Tressette engine integration', () => {
     beforeEach(() => {
         jest.spyOn(Math, 'random').mockReturnValue(0)
@@ -86,6 +102,106 @@ describe('Tressette engine integration', () => {
             const typedError = error as TressetteStoreError
             expect(typedError.code).toBe('CARD_NOT_OWNED')
         }
+    })
+
+    test('manual off-suit play is rejected when player has lead suit card', () => {
+        const { tableId } = setupStartedTable()
+        const leaderHand = tressetteTableStore.getPlayerHand(tableId, 'Pierpaolo')
+        const responderHand = tressetteTableStore.getPlayerHand(tableId, 'Tonino')
+        const suitConstraint = findPlayableSuitConstraint(leaderHand, responderHand)
+
+        if (!suitConstraint) {
+            throw new Error('expected setup to contain a lead-suit constraint scenario')
+        }
+
+        tressetteTableStore.playCard({
+            tableId,
+            username: 'Pierpaolo',
+            source: 'manual',
+            card: suitConstraint!.leadCard
+        })
+
+        try {
+            tressetteTableStore.playCard({
+                tableId,
+                username: 'Tonino',
+                source: 'manual',
+                card: suitConstraint!.offSuitCard
+            })
+            fail('expected playCard to throw INVALID_SUIT_RESPONSE')
+        } catch (error: unknown) {
+            expect(error).toBeInstanceOf(TressetteStoreError)
+            const typedError = error as TressetteStoreError
+            expect(typedError.code).toBe('INVALID_SUIT_RESPONSE')
+            expect(typedError.httpStatus).toBe(409)
+        }
+    })
+
+    test('manual same-suit response is accepted', () => {
+        const { tableId } = setupStartedTable()
+        const leaderHand = tressetteTableStore.getPlayerHand(tableId, 'Pierpaolo')
+        const responderHand = tressetteTableStore.getPlayerHand(tableId, 'Tonino')
+        const suitConstraint = findPlayableSuitConstraint(leaderHand, responderHand)
+
+        if (!suitConstraint) {
+            throw new Error('expected setup to contain a lead-suit constraint scenario')
+        }
+
+        tressetteTableStore.playCard({
+            tableId,
+            username: 'Pierpaolo',
+            source: 'manual',
+            card: suitConstraint!.leadCard
+        })
+
+        const responsePlay = tressetteTableStore.playCard({
+            tableId,
+            username: 'Tonino',
+            source: 'manual',
+            card: suitConstraint!.sameSuitCard
+        })
+
+        expect(responsePlay.play.card.suit).toBe(suitConstraint!.leadCard.suit)
+    })
+
+    test('manual off-suit is accepted when player has no lead suit cards', () => {
+        const { tableId } = setupStartedTable()
+        const leaderHand = tressetteTableStore.getPlayerHand(tableId, 'Pierpaolo')
+        const leadCard = leaderHand[0]
+
+        const sessions = (tressetteGameEngineAdapter as unknown as { sessions: Map<string, any> }).sessions
+        const session = sessions.get(tableId)
+        const responder = session?.table?.players?.find((player: any) => player.username === 'Tonino')
+
+        if (!leadCard || !responder) {
+            throw new Error('expected valid table session for follow-suit test setup')
+        }
+
+        const responderCards = responder.getCardsSnapshot()
+        const withoutLeadSuit = responderCards.filter((card: { suit: number }) => card.suit !== leadCard.suit)
+        if (withoutLeadSuit.length === 0) {
+            throw new Error('expected responder to have at least one off-suit card in setup')
+        }
+
+        responder.cards = withoutLeadSuit
+
+        tressetteTableStore.playCard({
+            tableId,
+            username: 'Pierpaolo',
+            source: 'manual',
+            card: leadCard
+        })
+
+        const offSuitCard = tressetteTableStore.getPlayerHand(tableId, 'Tonino')[0]
+
+        const result = tressetteTableStore.playCard({
+            tableId,
+            username: 'Tonino',
+            source: 'manual',
+            card: offSuitCard
+        })
+
+        expect(result.play.card).toEqual(offSuitCard)
     })
 
     test('playCard happy path delegates to engine and advances turn order', () => {
@@ -185,6 +301,4 @@ describe('Tressette engine integration', () => {
         }
     })
 })
-
-
 

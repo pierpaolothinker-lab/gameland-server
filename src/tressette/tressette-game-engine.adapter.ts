@@ -258,6 +258,9 @@ export class TressetteGameEngineAdapter {
             if (!currentPlayer.hasCard(parsed)) {
                 throw new TressetteGameEngineError('CARD_NOT_OWNED', 'selected card is not owned by player', 409)
             }
+            if (this.mustRespondToLeadSuit(session, currentPlayer, parsed)) {
+                throw new TressetteGameEngineError('INVALID_SUIT_RESPONSE', 'player must respond with lead suit', 409)
+            }
 
             try {
                 return currentPlayer.playCardAndReturn(parsed)
@@ -271,6 +274,22 @@ export class TressetteGameEngineAdapter {
         }
 
         return currentPlayer.respondToCardRandom(session.leadCard)
+    }
+
+    private mustRespondToLeadSuit(session: EngineSession, currentPlayer: Player3s74i, selectedCard: Card3s7): boolean {
+        if (session.cardsInCurrentTrick === 0 || !session.leadCard) {
+            return false
+        }
+
+        if (selectedCard.suit === session.leadCard.suit) {
+            return false
+        }
+
+        const hasLeadSuitInHand = currentPlayer
+            .getCardsSnapshot()
+            .some((card) => card.suit === session.leadCard?.suit)
+
+        return hasLeadSuitInHand
     }
 
     private parseManualCard(inputCard: TressetteCard): Card3s7 {

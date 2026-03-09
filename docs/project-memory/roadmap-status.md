@@ -41,3 +41,5 @@
 
 - [2026-03-09 02:34] Chiuso task authoritative hand/trick: gameplay ora backend-authoritative su mano+trick con reveal UX a fine trick.
 
+
+- [2026-03-09 10:32] Update note: Kickoff parallel stream: BE server-authoritative follow-suit validation + FE playable-cards guard; both started on dedicated codex branches and tracked as P1 in board.

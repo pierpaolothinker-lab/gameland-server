@@ -66,3 +66,14 @@
 - Repo: root
 - Branch: dev
 
+
+## 2026-03-09
+- [2026-03-09 10:32] Planner checkpoint new-task: avvio parallelo P1 BE follow-suit validation e P1 FE playable-cards guard (UI + backend error handling)
+- Repo: root
+- Branch: codex/dev-follow-suit-validation-be- Risks/Notes: Parallel FE/BE delivery requires strict contract sync on follow-suit errors and playable-card rules to avoid UX/backend drift.
+
+
+## 2026-03-09
+- [2026-03-09 10:36] Enforced follow-suit validation for manual play with INVALID_SUIT_RESPONSE (409), added integration tests and updated API contract.
+- Repo: server
+- Branch: codex/dev-follow-suit-validation-be

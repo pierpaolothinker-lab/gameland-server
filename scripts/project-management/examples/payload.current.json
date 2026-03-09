@@ -1,0 +1,24 @@
+{
+    "projectId":  "PVT_kwHOD9_bg84BRI_h",
+    "statusFieldId":  "PVTSSF_lAHOD9_bg84BRI_hzg_Dh8I",
+    "statusOptions":  {
+                          "Backlog":  "21682d1e",
+                          "Todo":  "f75ad846",
+                          "In Progress":  "47fc9ee4",
+                          "Done":  "98236657"
+                      },
+    "items":  [
+                  {
+                      "title":  "P1 BE: follow-suit validation",
+                      "body":  "Repo: server\nBranch: codex/dev-follow-suit-validation-be\nBranch evaluation: repo=server, base=dev, task-branch-required=yes, branch=codex/dev-follow-suit-validation-be, PR target expected=dev\nGoal: enforce server-authoritative follow-suit validation + coherent error semantics.",
+                      "status":  "In Progress",
+                      "itemId":  "PVTI_lAHOD9_bg84BRI_hzgnAGbY"
+                  },
+                  {
+                      "title":  "P1 FE: playable-cards guard",
+                      "body":  "Repo: app\nBranch: codex/dev-follow-suit-ui-guard-fe\nBranch evaluation: repo=app, base=dev, task-branch-required=yes, branch=codex/dev-follow-suit-ui-guard-fe, PR target expected=dev\nGoal: UI playable-cards guard with aligned backend error handling.",
+                      "status":  "In Progress",
+                      "itemId":  "PVTI_lAHOD9_bg84BRI_hzgnAGbk"
+                  }
+              ]
+}
