@@ -38,6 +38,7 @@ describe('turn timeout defaults', () => {
         expect(resolveTurnTimeoutSeconds()).toBe(9)
     })
 })
+
 describe('Tressette start event chain', () => {
     let server: HttpServer
     let io: IoServer
@@ -121,12 +122,14 @@ describe('Tressette start event chain', () => {
             )
             expect(typeof turnStarted.turnDeadlineMs).toBe('number')
             expect(turnStarted.turnDeadlineMs).toBeGreaterThan(Date.now())
+            expect(turnStarted.myHand).toBeNull()
 
             const turnUpdated = emitted[turnUpdatedIdx].payload
             expect(turnUpdated.tableId).toBe(created.tableId)
             expect(turnUpdated.currentPlayer.username).toBe(turnStarted.currentPlayer.username)
             expect(turnUpdated.timeoutSeconds).toBe(TURN_TIMEOUT_SECONDS)
             expect(typeof turnUpdated.secondsRemaining).toBe('number')
+            expect(turnUpdated.myHand).toBeNull()
 
             expect(timeoutSpy).toHaveBeenCalledWith(expect.any(Function), TURN_TIMEOUT_SECONDS * 1000)
             expect(intervalSpy).toHaveBeenCalledWith(expect.any(Function), 1000)
@@ -193,6 +196,101 @@ describe('Tressette start event chain', () => {
             toSpy.mockRestore()
         }
     })
+
+    test('timeout autoplay emits private player-state with coherent hand and trick reset', async () => {
+        const created = tressetteTableStore.create({ owner: 'Pierpaolo' })
+        tressetteTableStore.join({ tableId: created.tableId, username: 'Vito', position: 'NORD' })
+        tressetteTableStore.join({ tableId: created.tableId, username: 'Tonino', position: 'EST' })
+        tressetteTableStore.join({ tableId: created.tableId, username: 'Paolo', position: 'OVEST' })
+
+        const emitted: Array<{ event: string, payload: any }> = []
+        const scheduledCallbacks: Array<() => void> = []
+
+        const toSpy = jest.spyOn(io, 'to').mockImplementation((_room: string) => {
+            return {
+                emit: (event: string, payload: any) => {
+                    emitted.push({ event, payload })
+                }
+            } as any
+        })
+
+        const timeoutSpy = jest.spyOn(global, 'setTimeout').mockImplementation(((callback: TimerHandler) => {
+            scheduledCallbacks.push(callback as () => void)
+            return { mocked: true } as any
+        }) as typeof setTimeout)
+
+        const intervalSpy = jest.spyOn(global, 'setInterval').mockImplementation(((..._args: any[]) => {
+            return { mockedInterval: true } as any
+        }) as typeof setInterval)
+
+        const roomName = `tressette:table:live:${created.tableId}`
+        const fakeSocket = {
+            data: {
+                __tressetteTableUsers: new Map<string, string>([[`live:${created.tableId}`, 'Pierpaolo']])
+            },
+            emit: jest.fn()
+        }
+
+        ;(io.sockets.adapter.rooms as unknown as Map<string, Set<string>>).set(roomName, new Set(['fake-watcher']))
+        ;(io.sockets.sockets as unknown as Map<string, any>).set('fake-watcher', fakeSocket)
+
+        try {
+            const response = await fetch(`${baseUrl}/api/tressette/tables/${created.tableId}/start?mode=live`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username: 'Pierpaolo' })
+            })
+
+            expect(response.status).toBe(200)
+            expect(scheduledCallbacks.length).toBeGreaterThan(0)
+
+            scheduledCallbacks[0]()
+
+            const firstCardPlayed = emitted.find((entry) => entry.event === 'tressette:card-played')
+            expect(firstCardPlayed).toBeDefined()
+
+            const privateStatesAfterFirstPlay = fakeSocket.emit.mock.calls
+                .filter((entry: any[]) => entry[0] === 'tressette:player-state')
+                .map((entry: any[]) => entry[1])
+            expect(privateStatesAfterFirstPlay.length).toBeGreaterThan(0)
+
+            const firstPrivateState = privateStatesAfterFirstPlay[privateStatesAfterFirstPlay.length - 1]
+            expect(firstPrivateState.myHand).toEqual(expect.any(Array))
+            expect(firstPrivateState.currentTrick).toEqual(expect.any(Array))
+            expect(firstPrivateState.currentTurn).toEqual(expect.objectContaining({ username: expect.any(String) }))
+            expect(firstPrivateState.myHand.some((card: { suit: number, value: number }) => (
+                card.suit === firstCardPlayed?.payload.card.suit && card.value === firstCardPlayed?.payload.card.value
+            ))).toBe(false)
+
+            for (let i = 1; i < 4; i++) {
+                const cb = scheduledCallbacks[i]
+                expect(cb).toBeDefined()
+                cb()
+            }
+
+            const allPrivateStates = fakeSocket.emit.mock.calls
+                .filter((entry: any[]) => entry[0] === 'tressette:player-state')
+                .map((entry: any[]) => entry[1])
+            expect(allPrivateStates.length).toBeGreaterThanOrEqual(4)
+
+            const lastPrivateState = allPrivateStates[allPrivateStates.length - 1]
+            expect(lastPrivateState.currentTrick).toEqual([])
+            expect(lastPrivateState.currentTurn).toEqual(
+                expect.objectContaining({
+                    username: expect.any(String)
+                })
+            )
+
+            const roomTurnPayloads = emitted
+                .filter((entry) => entry.event === 'tressette:turn-started' || entry.event === 'tressette:turn-updated')
+                .map((entry) => entry.payload)
+            expect(roomTurnPayloads.every((payload) => payload.myHand === null)).toBe(true)
+        } finally {
+            ;(io.sockets.adapter.rooms as unknown as Map<string, Set<string>>).delete(roomName)
+            ;(io.sockets.sockets as unknown as Map<string, any>).delete('fake-watcher')
+            intervalSpy.mockRestore()
+            timeoutSpy.mockRestore()
+            toSpy.mockRestore()
+        }
+    })
 })
-
-

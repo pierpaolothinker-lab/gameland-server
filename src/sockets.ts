@@ -46,6 +46,21 @@ type WatchBootstrapSocket = {
     emit: (event: string, payload: unknown) => void
 }
 
+type PlayerStatePayload = {
+    tableId: string
+    mode: TressetteMode
+    myHand: TressetteCard[] | null
+    currentTrick: TressetteCurrentTrickPlay[]
+    currentTurn: {
+        username: string
+        position: TressettePosition | null
+    } | null
+    turnDeadlineMs: number | null
+    secondsRemaining: number
+    timeoutSeconds: number
+    status: TressetteTable['status']
+    points: TressetteTable['points']
+}
 export type TurnBootstrapPayload = {
     tableId: string
     mode: TressetteMode
@@ -187,6 +202,67 @@ const buildTurnBootstrapPayload = (
     }
 }
 
+
+export const buildPlayerStatePayload = (
+    mode: TressetteMode,
+    tableId: string,
+    username: string,
+    turnDeadlines: Map<string, number>
+): PlayerStatePayload | null => {
+    try {
+        const store = getStoreForMode(mode)
+        const table = store.getById(tableId)
+        const currentTrick = readCurrentTrickSafe(mode, tableId)
+        const myHand = readMyHandSafe(mode, tableId, username)
+        const currentTurn = store.getCurrentTurn(tableId)
+        const currentTurnPlayer = currentTurn
+            ? resolveCurrentPlayer(table, currentTurn.turnPlayer)
+            : null
+
+        const deadline = currentTurn
+            ? (turnDeadlines.get(turnKey(mode, tableId)) ?? (Date.now() + TURN_TIMEOUT_MS))
+            : null
+
+        return {
+            tableId,
+            mode,
+            myHand,
+            currentTrick,
+            currentTurn: currentTurn
+                ? {
+                    username: currentTurn.turnPlayer,
+                    position: currentTurnPlayer?.position ?? null
+                }
+                : null,
+            turnDeadlineMs: deadline,
+            secondsRemaining: deadline ? Math.max(0, Math.ceil((deadline - Date.now()) / 1000)) : 0,
+            timeoutSeconds: TURN_TIMEOUT_SECONDS,
+            status: table.status,
+            points: table.points
+        }
+    } catch (_error: unknown) {
+        return null
+    }
+}
+
+const emitPlayerStateToSocket = (
+    socket: any,
+    mode: TressetteMode,
+    tableId: string,
+    turnDeadlines: Map<string, number>,
+    username: string | null
+): void => {
+    if (!username) {
+        return
+    }
+
+    const payload = buildPlayerStatePayload(mode, tableId, username, turnDeadlines)
+    if (!payload) {
+        return
+    }
+
+    socket.emit('tressette:player-state', payload)
+}
 export const emitWatchTableBootstrap = (
     mode: TressetteMode,
     tableId: string,
@@ -204,6 +280,7 @@ export const emitWatchTableBootstrap = (
         mode,
         currentTrick
     })
+    emitPlayerStateToSocket(socket, mode, tableId, turnDeadlines, username)
 
     if (table.status !== 'in_game') {
         return
@@ -342,8 +419,6 @@ export const createIo = (server: http.Server) => {
             return
         }
 
-        const currentTrick = readCurrentTrickSafe(mode, tableId)
-
         room.forEach((socketId) => {
             const roomSocket = io.sockets.sockets.get(socketId)
             if (!roomSocket) {
@@ -351,14 +426,7 @@ export const createIo = (server: http.Server) => {
             }
 
             const username = getSocketTableUsername(roomSocket, mode, tableId)
-            const myHand = readMyHandSafe(mode, tableId, username)
-
-            roomSocket.emit('tressette:player-state', {
-                tableId,
-                mode,
-                currentTrick,
-                myHand
-            })
+            emitPlayerStateToSocket(roomSocket, mode, tableId, turnDeadlines, username)
         })
     }
 
@@ -470,14 +538,13 @@ export const createIo = (server: http.Server) => {
             currentTrick: readCurrentTrickSafe(mode, table.tableId)
         })
 
-        emitPerUserStateRefresh(mode, table.tableId)
-
         if (play.nextTurn && table.status === 'in_game') {
             emitTurnStarted(mode, table, play.nextTurn)
-            return
+        } else {
+            turnDeadlines.delete(turnKey(mode, table.tableId))
         }
 
-        turnDeadlines.delete(turnKey(mode, table.tableId))
+        emitPerUserStateRefresh(mode, table.tableId)
     }
 
     const emitStartPipeline = (context: StartPipelineContext) => {
@@ -692,6 +759,11 @@ export const createIo = (server: http.Server) => {
 
     return io
 }
+
+
+
+
+
 
 
 
