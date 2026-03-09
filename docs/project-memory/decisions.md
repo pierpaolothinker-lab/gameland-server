@@ -1,4 +1,4 @@
-﻿# Decisions (ADR-style)
+# Decisions (ADR-style)
 
 ## DEC-001 - Branching model
 - Date: 2026-03-08
@@ -23,3 +23,10 @@
 - Decision: Every implementation task must run on a new branch created from dev; after PR merge to dev, that branch must be deleted (local + remote).
 - Rationale: prevent branch drift, duplicate work, and stale divergences from dev.
 - Impact: no branch reuse and no lingering feature branches between tasks.
+
+## DEC-005 - PR-only updates on dev with required checks
+- Date: 2026-03-08
+- Decision: No direct implementation commits/pushes to dev. Every implementation task must land via PR into dev, and only after required GitHub checks pass.
+- Rationale: enforce deterministic quality gate and prevent unvalidated code from entering integration branch.
+- Impact: agents must always use codex/dev-<topic> branches, provide checks evidence, merge via PR, then delete task branch.
+

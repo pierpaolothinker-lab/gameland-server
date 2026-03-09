@@ -22,7 +22,9 @@ Use this structure in every handoff:
 
 ## Delivery constraints
 - Feature branches must target `dev`.
-- No direct commits to `main`.
+- No direct commits/pushes to `main`.
+- No direct commits/pushes to `dev` for implementation work.
+- `dev` updates are allowed only via PR merge after required GitHub checks are green.
 - API/socket behavior changes must update `docs/api-contract.md`.
 - Working tree must be clean at handoff.
 
@@ -34,4 +36,7 @@ Every handoff must include:
 - base branch used for creation (dev)
 - confirmation branch was created from current origin/dev
 - PR target (dev)
+- confirmation no direct push to dev was performed
+- required checks status (`PASS`) before merge
 - cleanup status after merge (remote/local branch deleted)
+

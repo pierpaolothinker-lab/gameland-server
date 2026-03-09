@@ -38,8 +38,10 @@ Acceptance Criteria:
 - <criterion>
 
 Constraints:
-- No direct changes to main
-- PR target: dev
+- No direct changes/pushes to main
+- No direct changes/pushes to dev
+- PR target: dev only
+- Merge only after required GitHub checks pass
 - Keep api-contract/docs aligned when integration changes
 ```
 
@@ -51,8 +53,9 @@ Default: create a dedicated task branch from `dev`.
 1. Sync dev with origin/dev.
 2. Create a new task branch from dev for each new task.
 3. Implement and validate in that branch only.
-4. Open PR 	ask-branch -> dev.
+4. Open PR task-branch -> dev (never push directly to dev).
 5. Merge PR after checks pass.
 6. Delete the task branch (local + remote) immediately after merge.
 
 No branch reuse across tasks. No direct implementation on dev except integration/cleanup operations explicitly approved in governance thread.
+

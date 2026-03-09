@@ -70,3 +70,10 @@
 - Branch: dev
 - Summary: Applied strict branch lifecycle policy and completed full app branch cleanup: only main/dev remain local and remote
 - Validation: server dev pushed with policy docs; app origin cleaned to main/dev; local app branches pruned
+
+## 2026-03-08 21:50 - governance-pr-only-dev-hardening
+- Repo: root
+- Branch: dev
+- Summary: Updated agent contract and prompt templates to enforce PR-only merges into dev after required checks pass; added branch guardrails policy.
+- Validation: docs updated and cross-referenced (contract/template/checklist/ADR).
+
