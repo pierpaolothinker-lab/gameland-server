@@ -173,12 +173,15 @@ export class TressetteGameEngineAdapter {
             return {
                 ...outcomeBase,
                 currentTrick: this.toCurrentTrickSnapshot(session),
+                completedTrick: null,
                 nextTurn: this.getCurrentTurn(tableSnapshot.tableId),
                 trickEnded: null,
                 handEnded: false,
                 nextStatus: 'in_game'
             }
         }
+
+        const completedTrickSnapshot = this.toCurrentTrickSnapshot(session)
 
         session.currentTrick.setWinner()
         const winner = session.currentTrick.getWinner()
@@ -205,6 +208,8 @@ export class TressetteGameEngineAdapter {
         const trickEnded = {
             trickNumber: session.trickNumber,
             winner: winner.username,
+            winnerPosition: this.toApiPosition(winnerSeat.position),
+            trickCards: completedTrickSnapshot,
             trickPoints,
             scoreSN: session.scoreSN,
             scoreEO: session.scoreEO
@@ -220,6 +225,7 @@ export class TressetteGameEngineAdapter {
             return {
                 ...outcomeBase,
                 currentTrick: [],
+                completedTrick: completedTrickSnapshot,
                 nextTurn: null,
                 trickEnded,
                 handEnded: true,
@@ -230,6 +236,7 @@ export class TressetteGameEngineAdapter {
         return {
             ...outcomeBase,
             currentTrick: [],
+            completedTrick: completedTrickSnapshot,
             nextTurn: this.getCurrentTurn(tableSnapshot.tableId),
             trickEnded,
             handEnded: false,
@@ -346,3 +353,4 @@ export class TressetteGameEngineAdapter {
 }
 
 export const tressetteGameEngineAdapter = new TressetteGameEngineAdapter()
+

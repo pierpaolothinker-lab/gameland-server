@@ -88,7 +88,7 @@ Server -> client:
 - `tressette:card-played` `{ tableId, mode, trickNumber, username, card, source, currentTrick }`
   - `source`: `manual | timeout_auto`
 - `tressette:player-state` `{ tableId, mode, currentTrick, myHand }` emitted per-user after each play (manual/timeout_auto) to keep hand/trick authoritative and in sync.
-- `tressette:trick-ended` `{ tableId, mode, trickNumber, winner, trickPoints, scoreSN, scoreEO }`
+- `tressette:trick-ended` `{ tableId, mode, trickNumber, winner, winnerPosition, trickCards, trickPoints, scoreSN, scoreEO }` (use `trickCards` for 2s reveal before FE clears center)
 - `tressette:error`
 
 ### Timeout/autoplay
@@ -141,6 +141,7 @@ When backend changes any endpoint/payload/event:
 1. Update this file in the same PR/commit.
 2. Add a short "Contract changes" section in PR notes.
 3. Notify frontend thread with exact changed payload examples.
+
 
 
 

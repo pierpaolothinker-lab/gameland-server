@@ -281,10 +281,27 @@ describe('Tressette start event chain', () => {
                 })
             )
 
+            const trickEndedEvent = emitted.find((entry) => entry.event === 'tressette:trick-ended')
+            expect(trickEndedEvent).toBeDefined()
+            expect(trickEndedEvent?.payload).toEqual(
+                expect.objectContaining({
+                    tableId: created.tableId,
+                    winner: expect.any(String),
+                    winnerPosition: expect.any(String),
+                    trickCards: expect.any(Array)
+                })
+            )
+            expect(trickEndedEvent?.payload.trickCards).toHaveLength(4)
+
             const roomTurnPayloads = emitted
                 .filter((entry) => entry.event === 'tressette:turn-started' || entry.event === 'tressette:turn-updated')
                 .map((entry) => entry.payload)
             expect(roomTurnPayloads.every((payload) => payload.myHand === null)).toBe(true)
+
+            const roomCardPlayedPayloads = emitted
+                .filter((entry) => entry.event === 'tressette:card-played' || entry.event === 'tressette:trick-ended')
+                .map((entry) => entry.payload)
+            expect(roomCardPlayedPayloads.every((payload) => payload.myHand === undefined)).toBe(true)
         } finally {
             ;(io.sockets.adapter.rooms as unknown as Map<string, Set<string>>).delete(roomName)
             ;(io.sockets.sockets as unknown as Map<string, any>).delete('fake-watcher')
@@ -294,3 +311,4 @@ describe('Tressette start event chain', () => {
         }
     })
 })
+

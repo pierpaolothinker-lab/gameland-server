@@ -135,11 +135,15 @@ describe('Tressette engine integration', () => {
             expect.objectContaining({
                 trickNumber: 1,
                 winner: expect.any(String),
+                winnerPosition: expect.any(String),
+                trickCards: expect.any(Array),
                 trickPoints: expect.any(Number),
                 scoreSN: expect.any(Number),
                 scoreEO: expect.any(Number)
             })
         )
+        expect(fourthPlay.play.trickEnded?.trickCards).toHaveLength(4)
+        expect(fourthPlay.play.completedTrick).toEqual(fourthPlay.play.trickEnded?.trickCards)
         expect(fourthPlay.play.currentTrick).toEqual([])
         expect(tressetteTableStore.getCurrentTrick(tableId)).toEqual([])
         expect(fourthPlay.play.nextTurn).toEqual(
@@ -181,5 +185,6 @@ describe('Tressette engine integration', () => {
         }
     })
 })
+
 
 

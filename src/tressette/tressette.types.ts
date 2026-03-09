@@ -71,6 +71,8 @@ export type TressetteTurnState = {
 export type TressetteTrickEnded = {
     trickNumber: number
     winner: string
+    winnerPosition: TressettePosition | null
+    trickCards: TressetteCurrentTrickPlay[]
     trickPoints: number
     scoreSN: number
     scoreEO: number
@@ -83,8 +85,10 @@ export type TressettePlayCardOutcome = {
     card: TressetteCard
     source: TressettePlayCardSource
     currentTrick: TressetteCurrentTrickPlay[]
+    completedTrick: TressetteCurrentTrickPlay[] | null
     nextTurn: TressetteTurnState | null
     trickEnded: TressetteTrickEnded | null
     handEnded: boolean
     nextStatus: TressetteTableStatus
 }
+

@@ -526,6 +526,8 @@ export const createIo = (server: http.Server) => {
                 trickNumber: play.trickEnded.trickNumber,
                 mode,
                 winner: play.trickEnded.winner,
+                winnerPosition: table.players.find((player) => player.username === play.trickEnded?.winner)?.position ?? null,
+                trickCards: play.trickEnded.trickCards,
                 trickPoints: play.trickEnded.trickPoints,
                 scoreSN: play.trickEnded.scoreSN,
                 scoreEO: play.trickEnded.scoreEO
@@ -759,6 +761,8 @@ export const createIo = (server: http.Server) => {
 
     return io
 }
+
+
 
 
 
