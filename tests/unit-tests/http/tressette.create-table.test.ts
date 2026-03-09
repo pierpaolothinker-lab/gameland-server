@@ -128,6 +128,67 @@ describe('Tressette table HTTP API', () => {
         expect(started.status).toBe('in_game')
     })
 
+    test('start fails when table is not complete', async () => {
+        const createResponse = await fetch(`${baseUrl}/api/tressette/tables`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ owner: 'Pierpaolo' })
+        })
+        const createdTable = await createResponse.json()
+
+        const response = await fetch(`${baseUrl}/api/tressette/tables/${createdTable.tableId}/start`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: 'Pierpaolo' })
+        })
+
+        expect(response.status).toBe(409)
+        const body = await response.json()
+        expect(body.error.code).toBe('TABLE_NOT_COMPLETE')
+    })
+
+    test('start fails when table status is not waiting', async () => {
+        const createResponse = await fetch(`${baseUrl}/api/tressette/tables`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ owner: 'Pierpaolo' })
+        })
+        const createdTable = await createResponse.json()
+        const tableId = createdTable.tableId
+
+        await fetch(`${baseUrl}/api/tressette/tables/${tableId}/join`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: 'Vito', position: 'NORD' })
+        })
+        await fetch(`${baseUrl}/api/tressette/tables/${tableId}/join`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: 'Tonino', position: 'EST' })
+        })
+        await fetch(`${baseUrl}/api/tressette/tables/${tableId}/join`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: 'Paolo', position: 'OVEST' })
+        })
+
+        const firstStart = await fetch(`${baseUrl}/api/tressette/tables/${tableId}/start`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: 'Pierpaolo' })
+        })
+        expect(firstStart.status).toBe(200)
+
+        const secondStart = await fetch(`${baseUrl}/api/tressette/tables/${tableId}/start`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: 'Pierpaolo' })
+        })
+
+        expect(secondStart.status).toBe(409)
+        const body = await secondStart.json()
+        expect(body.error.code).toBe('TABLE_ALREADY_STARTED')
+    })
     test('returns validation error when join username is only spaces', async () => {
         const createResponse = await fetch(`${baseUrl}/api/tressette/tables`, {
             method: 'POST',
@@ -375,4 +436,5 @@ describe('Tressette table HTTP API', () => {
         })
     })
 })
+
 

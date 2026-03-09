@@ -58,6 +58,10 @@ This document defines the integration contract between backend (`gameland-server
 ### Tressette - Start game
 - `POST /api/tressette/tables/:tableId/start`
 - Body: `{ "username": "OwnerName" }`
+- Preconditions:
+  - only owner can start (`FORBIDDEN_START`, `403`)
+  - table must be complete (`4/4`) (`TABLE_NOT_COMPLETE`, `409`)
+  - table status must be `waiting` (`TABLE_ALREADY_STARTED`, `409`)
 - `200` -> table snapshot with `status: "in_game"`
 - `404` -> `TABLE_NOT_FOUND`
 
@@ -136,3 +140,5 @@ When backend changes any endpoint/payload/event:
 1. Update this file in the same PR/commit.
 2. Add a short "Contract changes" section in PR notes.
 3. Notify frontend thread with exact changed payload examples.
+
+
