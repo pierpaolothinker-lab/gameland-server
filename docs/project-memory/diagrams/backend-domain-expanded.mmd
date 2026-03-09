@@ -1,0 +1,177 @@
+classDiagram
+direction LR
+
+%% =============================
+%% Bounded Context: Tressette API (active)
+%% =============================
+class App {
+  +express: Application
+  -registerRoutes()
+  -registerHealthRoute()
+}
+
+class TressetteRoutes {
+  +POST /tables
+  +GET /tables
+  +GET /tables/:tableId
+  +POST /tables/:tableId/join
+  +POST /tables/:tableId/leave
+  +POST /tables/:tableId/start
+}
+
+class TressetteTableStore {
+  -tables: Map~string,TressetteTable~
+  +create(input)
+  +list()
+  +getById(tableId)
+  +join(input)
+  +leave(input)
+  +start(input)
+  +reset()
+}
+
+class TressetteStoreError {
+  +code: string
+  +httpStatus: number
+}
+
+class TressetteTable {
+  +tableId: string
+  +owner: string
+  +players: TressetteTablePlayer[]
+  +isComplete: boolean
+  +points: TressetteTablePoints
+  +status: TressetteTableStatus
+}
+
+class TressetteTablePlayer {
+  +username: string
+  +position: TressettePosition
+}
+
+class TressetteTablePoints {
+  +teamSN: number
+  +teamEO: number
+}
+
+class TressetteTypes {
+  +TressettePosition
+  +TressetteTableStatus
+  +CreateTressetteTableInput
+  +JoinTressetteTableInput
+  +LeaveTressetteTableInput
+  +StartTressetteGameInput
+}
+
+class SocketGateway {
+  +createIo(server)
+  +on('tressette:join-table')
+  +on('tressette:leave-table')
+  +on('tressette:start-game')
+  +on('tressette:play-card')
+}
+
+App --> TressetteRoutes : mounts /api/tressette
+TressetteRoutes --> TressetteTableStore : uses
+SocketGateway --> TressetteTableStore : uses
+TressetteTableStore --> TressetteStoreError : throws
+TressetteTableStore --> TressetteTable : manages
+TressetteTable "1" o-- "*" TressetteTablePlayer : contains
+TressetteTable --> TressetteTablePoints : has
+TressetteRoutes --> TressetteTypes : validates
+SocketGateway --> TressetteTypes : validates
+
+%% =============================
+%% Bounded Context: Legacy 3s7/3s74i engine
+%% =============================
+class Player {
+  +username: string
+}
+
+class Player3s7 {
+  -cards: Card3s7[]
+  +addCard(card)
+  +playCard(card)
+  +playCardRandom()
+  +respondToCardRandom(card)
+}
+
+class Player3s74i {
+  +position: Position3s74i
+}
+
+class Position3s74i {
+  <<enumeration>>
+  Sud
+  Est
+  Nord
+  Ovest
+}
+
+class CardIT {
+  +suit: Suit
+  +value: number
+  +isEqual(card)
+}
+
+class Suit {
+  <<enumeration>>
+  Denari
+  Spade
+  Coppe
+  Bastoni
+}
+
+class Card3s7 {
+  -score: number
+  -sovranity: number
+  +getCardScore()
+  +getCardSovranity()
+}
+
+class DeckIT {
+  -cards: ICardIT[]
+  +shuffleFY()
+  +shuffleRG()
+  +italianShuffle()
+  +split()
+  +remove(index)
+  +add(card)
+  +sort()
+}
+
+class Trick3s4i {
+  -plays: Play3s7[]
+  -winner: Play3s7
+  +addPlay(play)
+  +setWinner()
+  +getWinner()
+  +getTotalScore()
+  +getCards()
+}
+
+class Table3s74i {
+  +players: Player3s74i[]
+  +deck: DeckIT
+  +owner: Player
+  +isComplete: boolean
+  +points: tablePoints
+  +join(player, position)
+  +leave(player)
+  +startGame(player)
+  +startSet(setIndex)
+  +startHand(setIndex, handIndex)
+  +playHand(setIndex, handIndex)
+  +playTrick(openerIndex, setIndex, handIndex)
+  +calculatePoints(setIndex, handIndex)
+}
+
+Player <|-- Player3s7
+Player3s7 <|-- Player3s74i
+CardIT <|-- Card3s7
+Table3s74i --> Player3s74i : seats
+Table3s74i --> DeckIT : uses
+Table3s74i --> Trick3s4i : aggregates tricks
+Trick3s4i --> Card3s7 : played cards
+CardIT --> Suit
+Player3s74i --> Position3s74i

@@ -1,0 +1,85 @@
+classDiagram
+direction LR
+
+class TressetteRoutes {
+  +listTables()
+  +createTable(owner)
+  +joinTable(tableId, username, position)
+  +leaveTable(tableId, username)
+  +startGame(tableId, username)
+}
+
+class TressetteTableStore {
+  +createTable(owner)
+  +list()
+  +getTable(tableId)
+  +join(tableId, username, position)
+  +leave(tableId, username)
+  +start(tableId, username)
+}
+
+class TressetteTable {
+  +tableId: string
+  +owner: string
+  +players: TressettePlayer[]
+  +status: waiting|in_game|ended
+  +isComplete: boolean
+  +points: TeamPoints
+}
+
+class TressettePlayer {
+  +username: string
+  +position: SUD|NORD|EST|OVEST
+}
+
+class TeamPoints {
+  +teamSN: number
+  +teamEO: number
+}
+
+class ApiContract {
+  +create/join/leave/start/list definitions
+  +error codes
+  +dev mock scenario notes
+}
+
+class TressetteTableService_FE {
+  +listTables()
+  +createTable(owner)
+  +joinTable(tableId, username, position)
+  +startTable(tableId, username)
+  +connectSocket()
+  +resolveMockMode()
+}
+
+class AuthSessionService_FE {
+  +currentUser()
+  +switchUser(userId)
+  +persistSession()
+}
+
+class TressetteLobbyPage_FE {
+  +renderTables()
+  +createTable()
+  +joinSeat()
+  +startGame()
+  +showMockScenarioBanner()
+}
+
+class MockAssets_FE {
+  +tables.list.json
+  +table.waiting.json
+  +table.in_game.json
+  +table.ended.json
+}
+
+TressetteRoutes --> TressetteTableStore : uses
+TressetteTableStore --> TressetteTable : manages
+TressetteTable "1" o-- "*" TressettePlayer : contains
+TressetteTable --> TeamPoints : has
+TressetteRoutes --> ApiContract : aligned with
+
+TressetteLobbyPage_FE --> TressetteTableService_FE : uses
+TressetteLobbyPage_FE --> AuthSessionService_FE : uses
+TressetteTableService_FE --> MockAssets_FE : when mock mode on
+TressetteTableService_FE --> TressetteRoutes : when API mode on
