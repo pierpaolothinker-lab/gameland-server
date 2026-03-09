@@ -437,10 +437,23 @@ describe('Tressette start event chain', () => {
 
             expect(response.status).toBe(200)
 
-            for (let index = 0; index < 40; index++) {
-                const callback = scheduledCallbacks[index]
-                expect(callback).toBeDefined()
+            let cursor = 0
+            let safety = 0
+            let sawHandEnded = false
+            let sawHand2Started = false
+            while ((!sawHandEnded || !sawHand2Started) && safety < 400) {
+                const callback = scheduledCallbacks[cursor]
+                if (!callback) {
+                    break
+                }
+
                 callback()
+                cursor += 1
+                safety += 1
+                sawHandEnded = emitted.some((entry) => entry.event === 'tressette:hand-ended')
+                sawHand2Started = emitted.some(
+                    (entry) => entry.event === 'tressette:hand-started' && entry.payload?.handNumber === 2
+                )
             }
 
             const handEnded = emitted.find((entry) => entry.event === 'tressette:hand-ended')
@@ -454,6 +467,8 @@ describe('Tressette start event chain', () => {
             )
 
             const handStartedEvents = emitted.filter((entry) => entry.event === 'tressette:hand-started')
+            expect(sawHandEnded).toBe(true)
+            expect(sawHand2Started).toBe(true)
             expect(handStartedEvents.length).toBeGreaterThanOrEqual(2)
             expect(handStartedEvents[0].payload.handNumber).toBe(1)
             expect(handStartedEvents[1].payload.handNumber).toBe(2)
@@ -464,6 +479,7 @@ describe('Tressette start event chain', () => {
         }
     })
 })
+
 
 
 

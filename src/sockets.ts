@@ -632,6 +632,15 @@ export const createIo = (server: http.Server) => {
                 scoreEO: table.points.teamEO,
                 gameEnded: play.handTransition.gameEnded
             })
+
+            if (!play.handTransition.gameEnded && play.handTransition.nextHandNumber !== null) {
+                io.to(tableRoom(mode, table.tableId)).emit('tressette:hand-started', {
+                    tableId: table.tableId,
+                    mode,
+                    status: table.status,
+                    handNumber: play.handTransition.nextHandNumber
+                })
+            }
         }
 
         io.to(tableRoom(mode, table.tableId)).emit('tressette:table-updated', {
@@ -875,4 +884,6 @@ export const createIo = (server: http.Server) => {
 
     return io
 }
+
+
 
