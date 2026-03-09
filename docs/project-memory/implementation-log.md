@@ -77,3 +77,16 @@
 - Summary: Updated agent contract and prompt templates to enforce PR-only merges into dev after required checks pass; added branch guardrails policy.
 - Validation: docs updated and cross-referenced (contract/template/checklist/ADR).
 
+
+## 2026-03-09 02:26 - tressette-authoritative-hand-trick-closure
+- Repo: root
+- Branch: dev
+- Summary: Task authoritative hand/trick chiuso: fix reveal 2s winner message, sync FE/BE, cleanup branch policy e branch residue completati
+- Validation: GUI interactive pass + FE/BE build/test pass + repo cleanup pass
+
+## 2026-03-09 02:34 - tressette-authoritative-hand-trick-final-close
+- Repo: root
+- Branch: dev
+- Summary: Completati fix FE/BE su stato autoritativo mano/trick, reveal 2s a fine trick, messaggio vincitore, hardening player-state privato, timeout default dev=5s/prod=20s.
+- Validation: GUI interattiva confermata; FE test/build verdi; BE test/build verdi; cleanup branch server completato.
+

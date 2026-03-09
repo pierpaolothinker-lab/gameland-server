@@ -55,3 +55,14 @@
 - Repo: root
 - Branch: dev
 
+
+## 2026-03-09
+- [2026-03-09 02:26] Task authoritative hand/trick chiuso: fix reveal 2s winner message, sync FE/BE, cleanup branch policy e branch residue completati
+- Repo: root
+- Branch: dev
+
+## 2026-03-09
+- [2026-03-09 02:34] Chiuso task gameplay authoritative hand/trick: reveal trick 2s, winner banner, sync stato privato per player, timeout dev 5s. Branch server ripuliti e dev allineato.
+- Repo: root
+- Branch: dev
+
