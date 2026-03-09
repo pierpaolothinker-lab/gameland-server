@@ -1,4 +1,4 @@
-﻿# Journal
+# Journal
 
 ## 2026-03-08
 - Established governance model: `main` for production, `dev` for continuous integration, task branches `dev-<task-slug>`.
@@ -70,7 +70,8 @@
 ## 2026-03-09
 - [2026-03-09 10:32] Planner checkpoint new-task: avvio parallelo P1 BE follow-suit validation e P1 FE playable-cards guard (UI + backend error handling)
 - Repo: root
-- Branch: codex/dev-follow-suit-validation-be- Risks/Notes: Parallel FE/BE delivery requires strict contract sync on follow-suit errors and playable-card rules to avoid UX/backend drift.
+- Branch: codex/dev-follow-suit-validation-be
+- Risks/Notes: Parallel FE/BE delivery requires strict contract sync on follow-suit errors and playable-card rules to avoid UX/backend drift.
 
 
 ## 2026-03-09
@@ -81,10 +82,18 @@
 ## 2026-03-09
 - [2026-03-09 11:05] Task follow-suit closed: FE playable-cards guard + BE server-authoritative follow-suit validation merged to dev (app PR #4, server PR #6), GUI validated, post-merge branch cleanup completed
 - Repo: root
-- Branch: dev- Risks/Notes: No blocking risk on closed task; residual product decisions remain on observer mode and reconnect policy.
+- Branch: dev
+- Risks/Notes: No blocking risk on closed task; residual product decisions remain on observer mode and reconnect policy.
 
 
 ## 2026-03-09
 - [2026-03-09 11:34] FE gameplay: scoreboard prominente SN/EO + transizione multi-mano con hand-start/hand-end e update realtime punti; fix mapping INVALID_SUIT_RESPONSE e copertura test component su scoreboard/multihand/follow-suit
 - Repo: app
 - Branch: codex/dev-multi-hand-runtime-be
+
+## 2026-03-09
+- [2026-03-09 19:09] Planner checkpoint new-task: opened parallel P1 tasks for pre-game countdown 5s (BE server-authoritative + FE overlay/input lock) and prepared board upsert
+- Repo: root
+- Branch: codex/dev-pregame-countdown-be- Risks/Notes: Requires strict FE/BE contract alignment for countdown events and play-card lock errors to prevent race conditions at game start.
+
+

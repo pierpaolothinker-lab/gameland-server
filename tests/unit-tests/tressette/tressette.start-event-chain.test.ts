@@ -1,10 +1,18 @@
-import 'jest'
+﻿import 'jest'
 import { AddressInfo } from 'net'
 import { createServer, Server as HttpServer } from 'http'
 import { Server as IoServer } from 'socket.io'
 import app from '../../../src/app'
-import { createIo, resolveTrickRevealMs, resolveTurnTimeoutSeconds, TRICK_REVEAL_MS, TURN_TIMEOUT_SECONDS } from '../../../src/sockets'
-import { tressetteTableStore } from '../../../src/tressette/tressette-table.store'
+import {
+    createIo,
+    PREGAME_COUNTDOWN_SECONDS,
+    resolvePregameCountdownSeconds,
+    resolveTrickRevealMs,
+    resolveTurnTimeoutSeconds,
+    TRICK_REVEAL_MS,
+    TURN_TIMEOUT_SECONDS
+} from '../../../src/sockets'
+import { tressetteTableStore, TressetteStoreError } from '../../../src/tressette/tressette-table.store'
 import { resetStoresForTests } from '../../../src/tressette/tressette-mode.store'
 import { clearStartPipelineDispatcher } from '../../../src/tressette/tressette-start.pipeline'
 
@@ -12,11 +20,13 @@ describe('turn timeout defaults', () => {
     const previousNodeEnv = process.env.NODE_ENV
     const previousTimeoutEnv = process.env.TRESSETTE_TURN_TIMEOUT_SECONDS
     const previousRevealEnv = process.env.TRESSETTE_TRICK_REVEAL_MS
+    const previousPregameEnv = process.env.TRESSETTE_PREGAME_COUNTDOWN_SECONDS
 
     afterEach(() => {
         process.env.NODE_ENV = previousNodeEnv
         process.env.TRESSETTE_TURN_TIMEOUT_SECONDS = previousTimeoutEnv
         process.env.TRESSETTE_TRICK_REVEAL_MS = previousRevealEnv
+        process.env.TRESSETTE_PREGAME_COUNTDOWN_SECONDS = previousPregameEnv
     })
 
     test('non-production default timeout is 5 seconds', () => {
@@ -47,12 +57,27 @@ describe('turn timeout defaults', () => {
         process.env.TRESSETTE_TRICK_REVEAL_MS = '3500'
         expect(resolveTrickRevealMs()).toBe(3500)
     })
+
+    test('pregame countdown default is 5 seconds and supports env override', () => {
+        delete process.env.TRESSETTE_PREGAME_COUNTDOWN_SECONDS
+        expect(resolvePregameCountdownSeconds()).toBe(5)
+
+        process.env.TRESSETTE_PREGAME_COUNTDOWN_SECONDS = '7'
+        expect(resolvePregameCountdownSeconds()).toBe(7)
+    })
 })
 
 describe('Tressette start event chain', () => {
     let server: HttpServer
     let io: IoServer
     let baseUrl: string
+
+    const advancePregameCountdown = (intervalSpy: jest.SpyInstance) => {
+        const countdownIntervalCb = intervalSpy.mock.calls[0][0] as () => void
+        for (let index = 0; index < PREGAME_COUNTDOWN_SECONDS; index++) {
+            countdownIntervalCb()
+        }
+    }
 
     beforeAll((done) => {
         server = createServer(app.express)
@@ -75,7 +100,7 @@ describe('Tressette start event chain', () => {
         server.close(() => done())
     })
 
-    test('start success emits hand-started + immediate turn-started and schedules timeout', async () => {
+    test('start enters pregame countdown then emits hand-started + turn-started and schedules timeout', async () => {
         const created = tressetteTableStore.create({ owner: 'Pierpaolo' })
         tressetteTableStore.join({ tableId: created.tableId, username: 'Vito', position: 'NORD' })
         tressetteTableStore.join({ tableId: created.tableId, username: 'Tonino', position: 'EST' })
@@ -94,8 +119,8 @@ describe('Tressette start event chain', () => {
             return { mocked: true } as any
         }) as typeof setTimeout)
 
-        const intervalSpy = jest.spyOn(global, 'setInterval').mockImplementation(((..._args: any[]) => {
-            return { mockedInterval: true } as any
+        const intervalSpy = jest.spyOn(global, 'setInterval').mockImplementation(((callback: TimerHandler) => {
+            return { mockedInterval: true, callback } as any
         }) as typeof setInterval)
 
         try {
@@ -107,7 +132,28 @@ describe('Tressette start event chain', () => {
 
             expect(response.status).toBe(200)
             const body = await response.json()
-            expect(body.status).toBe('in_game')
+            expect(body.status).toBe('starting')
+
+            try {
+                tressetteTableStore.playCard({ tableId: created.tableId, username: 'Pierpaolo', source: 'manual' })
+                fail('expected playCard to throw GAME_STARTING')
+            } catch (error: unknown) {
+                expect(error).toBeInstanceOf(TressetteStoreError)
+                const typedError = error as TressetteStoreError
+                expect(typedError.code).toBe('GAME_STARTING')
+            }
+
+            const countdownValues = emitted
+                .filter((entry) => entry.event === 'tressette:game-start-countdown')
+                .map((entry) => entry.payload.secondsRemaining)
+            expect(countdownValues).toEqual([PREGAME_COUNTDOWN_SECONDS])
+
+            advancePregameCountdown(intervalSpy)
+
+            const allCountdownValues = emitted
+                .filter((entry) => entry.event === 'tressette:game-start-countdown')
+                .map((entry) => entry.payload.secondsRemaining)
+            expect(allCountdownValues).toEqual([5, 4, 3, 2, 1, 0])
 
             const eventNames = emitted.map((x) => x.event)
             const tableUpdatedIdx = eventNames.indexOf('tressette:table-updated')
@@ -172,8 +218,8 @@ describe('Tressette start event chain', () => {
             return { mocked: true } as any
         }) as typeof setTimeout)
 
-        const intervalSpy = jest.spyOn(global, 'setInterval').mockImplementation(((..._args: any[]) => {
-            return { mockedInterval: true } as any
+        const intervalSpy = jest.spyOn(global, 'setInterval').mockImplementation(((callback: TimerHandler) => {
+            return { mockedInterval: true, callback } as any
         }) as typeof setInterval)
 
         try {
@@ -184,6 +230,7 @@ describe('Tressette start event chain', () => {
             })
 
             expect(response.status).toBe(200)
+            advancePregameCountdown(intervalSpy)
             expect(scheduledCallbacks.length).toBeGreaterThan(0)
 
             const firstTimeout = scheduledCallbacks[0]
@@ -229,8 +276,8 @@ describe('Tressette start event chain', () => {
             return { mocked: true } as any
         }) as typeof setTimeout)
 
-        const intervalSpy = jest.spyOn(global, 'setInterval').mockImplementation(((..._args: any[]) => {
-            return { mockedInterval: true } as any
+        const intervalSpy = jest.spyOn(global, 'setInterval').mockImplementation(((callback: TimerHandler) => {
+            return { mockedInterval: true, callback } as any
         }) as typeof setInterval)
 
         try {
@@ -241,6 +288,7 @@ describe('Tressette start event chain', () => {
             })
 
             expect(response.status).toBe(200)
+            advancePregameCountdown(intervalSpy)
             expect(scheduled[0].delay).toBe(TURN_TIMEOUT_SECONDS * 1000)
 
             const initialTurnStartedCount = emitted.filter((entry) => entry.event === 'tressette:turn-started').length
@@ -305,8 +353,8 @@ describe('Tressette start event chain', () => {
             return { mocked: true } as any
         }) as typeof setTimeout)
 
-        const intervalSpy = jest.spyOn(global, 'setInterval').mockImplementation(((..._args: any[]) => {
-            return { mockedInterval: true } as any
+        const intervalSpy = jest.spyOn(global, 'setInterval').mockImplementation(((callback: TimerHandler) => {
+            return { mockedInterval: true, callback } as any
         }) as typeof setInterval)
 
         const roomName = `tressette:table:live:${created.tableId}`
@@ -328,6 +376,7 @@ describe('Tressette start event chain', () => {
             })
 
             expect(response.status).toBe(200)
+            advancePregameCountdown(intervalSpy)
             expect(scheduledCallbacks.length).toBeGreaterThan(0)
 
             scheduledCallbacks[0]()
@@ -424,8 +473,8 @@ describe('Tressette start event chain', () => {
             return { mocked: true } as any
         }) as typeof setTimeout)
 
-        const intervalSpy = jest.spyOn(global, 'setInterval').mockImplementation(((..._args: any[]) => {
-            return { mockedInterval: true } as any
+        const intervalSpy = jest.spyOn(global, 'setInterval').mockImplementation(((callback: TimerHandler) => {
+            return { mockedInterval: true, callback } as any
         }) as typeof setInterval)
 
         try {
@@ -436,6 +485,7 @@ describe('Tressette start event chain', () => {
             })
 
             expect(response.status).toBe(200)
+            advancePregameCountdown(intervalSpy)
 
             let cursor = 0
             let safety = 0
@@ -479,6 +529,11 @@ describe('Tressette start event chain', () => {
         }
     })
 })
+
+
+
+
+
 
 
 

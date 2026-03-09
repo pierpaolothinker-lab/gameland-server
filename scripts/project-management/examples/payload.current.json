@@ -9,16 +9,16 @@
                       },
     "items":  [
                   {
-                      "title":  "P1 BE: follow-suit validation",
-                      "body":  "Repo: server\nBranch: codex/dev-follow-suit-validation-be -\u003e dev (merged PR #6)\nBranch evaluation: repo=server, base=dev, task-branch-required=yes, feature branch deleted post-merge\nOutcome: server-authoritative follow-suit validation closed with 409 INVALID_SUIT_RESPONSE; contract updated in docs/api-contract.md; GUI/test validated.",
-                      "status":  "Done",
-                      "itemId":  "PVTI_lAHOD9_bg84BRI_hzgnAGbY"
+                      "title":  "P1 BE pre-game countdown 5s (server-authoritative)",
+                      "body":  "Repo target: server\nBase branch: dev\nTask branch required: yes\nBranch: codex/dev-pregame-countdown-be\nPR target: dev\nScope: tressette:game-start-countdown (5..0), play-card lock during countdown with dedicated contract error, in_game only after countdown end, api-contract + chain/start tests.",
+                      "status":  "In Progress",
+                      "itemId":  "PVTI_lAHOD9_bg84BRI_hzgnCh_M"
                   },
                   {
-                      "title":  "P1 FE: playable-cards guard",
-                      "body":  "Repo: app\nBranch: codex/dev-follow-suit-ui-guard-fe -\u003e dev (merged PR #4)\nBranch evaluation: repo=app, base=dev, task-branch-required=yes, feature branch deleted post-merge\nOutcome: playable-cards guard + visual highlight + follow-suit UX coherence closed; GUI validated.",
-                      "status":  "Done",
-                      "itemId":  "PVTI_lAHOD9_bg84BRI_hzgnAGbk"
+                      "title":  "P1 FE pre-game overlay countdown + input lock",
+                      "body":  "Repo target: app\nBase branch: dev\nTask branch required: yes\nBranch: codex/dev-pregame-countdown-fe\nPR target: dev\nScope: overlay pre-game countdown, darkened background, interaction lock during countdown, no regressions on turn/timer/reveal trick/scoreboard/data mode.",
+                      "status":  "In Progress",
+                      "itemId":  "PVTI_lAHOD9_bg84BRI_hzgnCh_Q"
                   }
               ]
 }

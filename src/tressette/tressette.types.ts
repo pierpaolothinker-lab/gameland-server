@@ -12,7 +12,7 @@ export type TressetteTablePoints = {
     teamEO: number
 }
 
-export type TressetteTableStatus = 'waiting' | 'in_game' | 'ended'
+export type TressetteTableStatus = 'waiting' | 'starting' | 'in_game' | 'ended'
 
 export type TressetteTable = {
     tableId: string

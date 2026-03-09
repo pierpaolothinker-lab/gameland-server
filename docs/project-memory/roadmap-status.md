@@ -45,3 +45,5 @@
 - [2026-03-09 10:32] Update note: Kickoff parallel stream: BE server-authoritative follow-suit validation + FE playable-cards guard; both started on dedicated codex branches and tracked as P1 in board.
 
 - [2026-03-09 11:05] Update note: Follow-suit stream closed: FE playable-cards guard and BE INVALID_SUIT_RESPONSE(409) validation merged; project baseline reset on dev/main only for both repos.
+
+- [2026-03-09 19:09] Update note: New P1 stream started: pre-game countdown 5s with authoritative BE countdown event/lock and FE overlay+input lock; both tracked In Progress.

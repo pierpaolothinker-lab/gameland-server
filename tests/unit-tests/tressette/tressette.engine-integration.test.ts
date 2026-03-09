@@ -9,7 +9,8 @@ const setupStartedTable = () => {
     tressetteTableStore.join({ tableId: created.tableId, username: 'Tonino', position: 'EST' })
     tressetteTableStore.join({ tableId: created.tableId, username: 'Paolo', position: 'OVEST' })
 
-    const started = tressetteTableStore.start({ tableId: created.tableId, username: 'Pierpaolo' })
+    tressetteTableStore.start({ tableId: created.tableId, username: 'Pierpaolo' })
+    const started = tressetteTableStore.activateStartedGame(created.tableId)
 
     return {
         tableId: created.tableId,
@@ -398,7 +399,7 @@ describe('Tressette engine integration', () => {
         const { tableId } = setupStartedTable()
 
         let handEndedCount = 0
-        let status: 'waiting' | 'in_game' | 'ended' = 'in_game'
+        let status: 'waiting' | 'starting' | 'in_game' | 'ended' = 'in_game'
 
         for (let index = 0; index < 2000; index++) {
             const turn = tressetteTableStore.getCurrentTurn(tableId)
@@ -433,6 +434,7 @@ describe('Tressette engine integration', () => {
 
         ;(Math.random as jest.Mock).mockReturnValue(0.99)
         tressetteTableStore.start({ tableId: created.tableId, username: 'Marta' })
+        tressetteTableStore.activateStartedGame(created.tableId)
 
         const play = tressetteTableStore.playCard({ tableId: created.tableId, username: 'Paolo', source: 'manual' })
         expect(play.play.nextTurn?.turnPlayer).toBe('Marta')
@@ -456,4 +458,6 @@ describe('Tressette engine integration', () => {
         }
     })
 })
+
+
 
