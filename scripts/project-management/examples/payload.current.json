@@ -10,14 +10,14 @@
     "items":  [
                   {
                       "title":  "P1 BE: follow-suit validation",
-                      "body":  "Repo: server\nBranch: codex/dev-follow-suit-validation-be\nBranch evaluation: repo=server, base=dev, task-branch-required=yes, branch=codex/dev-follow-suit-validation-be, PR target expected=dev\nGoal: enforce server-authoritative follow-suit validation + coherent error semantics.",
-                      "status":  "In Progress",
+                      "body":  "Repo: server\nBranch: codex/dev-follow-suit-validation-be -\u003e dev (merged PR #6)\nBranch evaluation: repo=server, base=dev, task-branch-required=yes, feature branch deleted post-merge\nOutcome: server-authoritative follow-suit validation closed with 409 INVALID_SUIT_RESPONSE; contract updated in docs/api-contract.md; GUI/test validated.",
+                      "status":  "Done",
                       "itemId":  "PVTI_lAHOD9_bg84BRI_hzgnAGbY"
                   },
                   {
                       "title":  "P1 FE: playable-cards guard",
-                      "body":  "Repo: app\nBranch: codex/dev-follow-suit-ui-guard-fe\nBranch evaluation: repo=app, base=dev, task-branch-required=yes, branch=codex/dev-follow-suit-ui-guard-fe, PR target expected=dev\nGoal: UI playable-cards guard with aligned backend error handling.",
-                      "status":  "In Progress",
+                      "body":  "Repo: app\nBranch: codex/dev-follow-suit-ui-guard-fe -\u003e dev (merged PR #4)\nBranch evaluation: repo=app, base=dev, task-branch-required=yes, feature branch deleted post-merge\nOutcome: playable-cards guard + visual highlight + follow-suit UX coherence closed; GUI validated.",
+                      "status":  "Done",
                       "itemId":  "PVTI_lAHOD9_bg84BRI_hzgnAGbk"
                   }
               ]

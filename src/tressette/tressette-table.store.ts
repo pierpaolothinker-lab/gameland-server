@@ -200,6 +200,12 @@ export class TressetteTableStore {
                 card: input.card
             })
             table.status = play.nextStatus
+            if (play.trickEnded) {
+                table.points = {
+                    teamSN: play.trickEnded.scoreSN,
+                    teamEO: play.trickEnded.scoreEO
+                }
+            }
 
             return {
                 table: this.clone(table),
@@ -261,3 +267,4 @@ export class TressetteTableStore {
 }
 
 export const tressetteTableStore = new TressetteTableStore()
+

@@ -77,3 +77,14 @@
 - [2026-03-09 10:36] Enforced follow-suit validation for manual play with INVALID_SUIT_RESPONSE (409), added integration tests and updated API contract.
 - Repo: server
 - Branch: codex/dev-follow-suit-validation-be
+
+## 2026-03-09
+- [2026-03-09 11:05] Task follow-suit closed: FE playable-cards guard + BE server-authoritative follow-suit validation merged to dev (app PR #4, server PR #6), GUI validated, post-merge branch cleanup completed
+- Repo: root
+- Branch: dev- Risks/Notes: No blocking risk on closed task; residual product decisions remain on observer mode and reconnect policy.
+
+
+## 2026-03-09
+- [2026-03-09 11:34] FE gameplay: scoreboard prominente SN/EO + transizione multi-mano con hand-start/hand-end e update realtime punti; fix mapping INVALID_SUIT_RESPONSE e copertura test component su scoreboard/multihand/follow-suit
+- Repo: app
+- Branch: codex/dev-multi-hand-runtime-be

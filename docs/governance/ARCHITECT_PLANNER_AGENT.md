@@ -37,3 +37,10 @@ For each cycle:
 3. Update memory.
 4. Update board payload/sync.
 5. Emit next FE/BE tasks.
+
+
+## Branch Policy (Strict)
+- Do not open a new task branch while the current task branch is still open.
+- A new branch is exceptional and requires explicit governance approval.
+- Standard flow: continue current branch -> PR to dev -> merge after checks -> delete branch.
+

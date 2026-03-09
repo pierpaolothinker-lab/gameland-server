@@ -15,4 +15,3 @@
 - Do we enforce CODEOWNERS for FE/BE review ownership?
 - Should planner board sync run at every task state transition (`new-task`, `in-progress`, `ready-for-review`, `merged`) or only on scheduled cycles?
 
-- For playable-cards guard, should non-playable cards be hard-disabled in UI or clickable with explicit backend-driven error feedback?

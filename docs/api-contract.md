@@ -1,6 +1,6 @@
 # Gameland API Contract
 
-Last updated: 2026-03-08
+Last updated: 2026-03-09
 Source of truth: backend (`gameland-server`)
 
 ## Purpose
@@ -82,15 +82,20 @@ Client -> server:
 Server -> client:
 - `tressette:mode-selected`
 - `tressette:table-updated` (including immediate snapshot on `tressette:watch-table`) with `{ ...table, mode, currentTrick }`
-- `tressette:hand-started`
+- `tressette:hand-started` `{ tableId, mode, status, handNumber }`
 - `tressette:turn-started` `{ tableId, mode, trickNumber, currentPlayer, currentTrick, myHand, turnDeadlineMs, secondsRemaining, timeoutSeconds }` (`myHand` is always `null` in room broadcast)
 - `tressette:turn-updated` `{ tableId, mode, trickNumber, currentPlayer, currentTrick, myHand, turnDeadlineMs, secondsRemaining, timeoutSeconds }` (`myHand` is always `null` in room broadcast)
 - `tressette:turn-bootstrap` `{ tableId, mode, trickNumber, currentPlayer, currentTrick, myHand, turnDeadlineMs, secondsRemaining, timeoutSeconds }` (`myHand` is populated only for the requesting `username`)
 - `tressette:card-played` `{ tableId, mode, trickNumber, username, card, source, currentTrick }`
   - `source`: `manual | timeout_auto`
 - `tressette:player-state` `{ tableId, mode, currentTrick, myHand }` emitted per-user after each play (manual/timeout_auto) to keep hand/trick authoritative and in sync.
-- `tressette:trick-ended` `{ tableId, mode, trickNumber, winner, winnerPosition, trickCards, trickPoints, scoreSN, scoreEO }` (use `trickCards` for 2s reveal before FE clears center)
+- `tressette:trick-ended` `{ tableId, mode, trickNumber, winner, winnerPosition, trickCards, trickPoints, scoreSN, scoreEO }` (use `trickCards` for reveal window before FE clears center)
 - `tressette:error`
+
+### Trick reveal window
+- After `tressette:trick-ended`, server delays next `tressette:turn-started` by a reveal window.
+- Reveal delay env: `TRESSETTE_TRICK_REVEAL_MS` (default `2000`, accepts `0` to disable delay).
+- Next-turn countdown starts only after delayed `turn-started` emission.
 
 ### Timeout/autoplay
 - Turn timeout (server-authoritative):

@@ -99,6 +99,18 @@ export const resolveTurnTimeoutSeconds = (): number => {
 
 export const TURN_TIMEOUT_SECONDS = resolveTurnTimeoutSeconds()
 const TURN_TIMEOUT_MS = TURN_TIMEOUT_SECONDS * 1000
+export const resolveTrickRevealMs = (): number => {
+    const raw = process.env.TRESSETTE_TRICK_REVEAL_MS
+    if (raw) {
+        const parsed = Number(raw)
+        if (Number.isInteger(parsed) && parsed >= 0) {
+            return parsed
+        }
+    }
+
+    return 2000
+}
+export const TRICK_REVEAL_MS = resolveTrickRevealMs()
 
 const ALLOWED_SOCKET_ORIGINS = ['http://localhost:4200', 'http://localhost:4400', 'http://localhost:8100']
 
@@ -230,7 +242,7 @@ export const buildPlayerStatePayload = (
             : null
 
         const deadline = currentTurn
-            ? (turnDeadlines.get(turnKey(mode, tableId)) ?? (Date.now() + TURN_TIMEOUT_MS))
+            ? (turnDeadlines.get(turnKey(mode, tableId)) ?? null)
             : null
         const revealMetadata = revealMetadataByTable.get(turnKey(mode, tableId))
 
@@ -405,6 +417,7 @@ export const createIo = (server: http.Server) => {
 
     const turnTimeouts = new Map<string, NodeJS.Timeout>()
     const turnTickers = new Map<string, NodeJS.Timeout>()
+    const turnStartDelays = new Map<string, NodeJS.Timeout>()
     const turnDeadlines = new Map<string, number>()
     const lastCompletedTrickByTable = new Map<string, LastCompletedTrickMetadata>()
 
@@ -428,6 +441,17 @@ export const createIo = (server: http.Server) => {
 
         clearInterval(existing)
         turnTickers.delete(key)
+    }
+
+    const clearTurnStartDelay = (mode: TressetteMode, tableId: string) => {
+        const key = turnKey(mode, tableId)
+        const existing = turnStartDelays.get(key)
+        if (!existing) {
+            return
+        }
+
+        clearTimeout(existing)
+        turnStartDelays.delete(key)
     }
 
     const emitPerUserStateRefresh = (mode: TressetteMode, tableId: string, clearRevealMetadata = false) => {
@@ -476,6 +500,7 @@ export const createIo = (server: http.Server) => {
         turnDeadlineMs: number
     ) => {
         clearTurnTicker(mode, table.tableId)
+        clearTurnStartDelay(mode, table.tableId)
 
         emitTurnUpdated(mode, table, turn, currentPlayer, turnDeadlineMs)
 
@@ -493,6 +518,7 @@ export const createIo = (server: http.Server) => {
     const emitTurnStarted = (mode: TressetteMode, table: TressetteTable, turn: TressetteTurnState): number => {
         clearTurnTimeout(mode, table.tableId)
         clearTurnTicker(mode, table.tableId)
+        clearTurnStartDelay(mode, table.tableId)
 
         const currentPlayer = resolveCurrentPlayer(table, turn.turnPlayer)
         const turnDeadlineMs = Date.now() + TURN_TIMEOUT_MS
@@ -528,11 +554,50 @@ export const createIo = (server: http.Server) => {
         return turnDeadlineMs
     }
 
+    const scheduleTurnStartedWithRevealDelay = (
+        mode: TressetteMode,
+        table: TressetteTable,
+        turn: TressetteTurnState
+    ) => {
+        clearTurnStartDelay(mode, table.tableId)
+
+        if (TRICK_REVEAL_MS <= 0) {
+            emitTurnStarted(mode, table, turn)
+            return
+        }
+
+        const key = turnKey(mode, table.tableId)
+        const handle = setTimeout(() => {
+            turnStartDelays.delete(key)
+
+            if (getTableStatusSafe(mode, table.tableId) !== 'in_game') {
+                turnDeadlines.delete(key)
+                return
+            }
+
+            const latestTurn = getStoreForMode(mode).getCurrentTurn(table.tableId)
+            if (!latestTurn) {
+                turnDeadlines.delete(key)
+                return
+            }
+
+            if (latestTurn.turnPlayer !== turn.turnPlayer || latestTurn.trickNumber !== turn.trickNumber) {
+                return
+            }
+
+            const refreshedTable = getStoreForMode(mode).getById(table.tableId)
+            emitTurnStarted(mode, refreshedTable, latestTurn)
+        }, TRICK_REVEAL_MS)
+
+        turnStartDelays.set(key, handle)
+    }
+
     const emitPlayFlow = (mode: TressetteMode, result: TressettePlayCardStoreResult) => {
         const { table, play } = result
 
         clearTurnTimeout(mode, table.tableId)
         clearTurnTicker(mode, table.tableId)
+        clearTurnStartDelay(mode, table.tableId)
 
         io.to(tableRoom(mode, table.tableId)).emit('tressette:card-played', {
             tableId: play.tableId,
@@ -557,6 +622,26 @@ export const createIo = (server: http.Server) => {
                 scoreEO: play.trickEnded.scoreEO
             })
         }
+        if (play.handTransition.handEnded) {
+            io.to(tableRoom(mode, table.tableId)).emit('tressette:hand-ended', {
+                tableId: table.tableId,
+                mode,
+                handNumber: play.handTransition.handNumber,
+                handScore: play.handTransition.handScore,
+                scoreSN: table.points.teamSN,
+                scoreEO: table.points.teamEO,
+                gameEnded: play.handTransition.gameEnded
+            })
+
+            if (!play.handTransition.gameEnded && play.handTransition.nextHandNumber !== null) {
+                io.to(tableRoom(mode, table.tableId)).emit('tressette:hand-started', {
+                    tableId: table.tableId,
+                    mode,
+                    status: table.status,
+                    handNumber: play.handTransition.nextHandNumber
+                })
+            }
+        }
 
         io.to(tableRoom(mode, table.tableId)).emit('tressette:table-updated', {
             ...table,
@@ -573,7 +658,12 @@ export const createIo = (server: http.Server) => {
         }
 
         if (play.nextTurn && table.status === 'in_game') {
-            emitTurnStarted(mode, table, play.nextTurn)
+            if (play.trickEnded) {
+                turnDeadlines.delete(turnKey(mode, table.tableId))
+                scheduleTurnStartedWithRevealDelay(mode, table, play.nextTurn)
+            } else {
+                emitTurnStarted(mode, table, play.nextTurn)
+            }
         } else {
             turnDeadlines.delete(turnKey(mode, table.tableId))
         }
@@ -592,7 +682,8 @@ export const createIo = (server: http.Server) => {
         io.to(tableRoom(context.mode, table.tableId)).emit('tressette:hand-started', {
             tableId: table.tableId,
             mode: context.mode,
-            status: table.status
+            status: table.status,
+            handNumber: 1
         })
 
         const currentTurn = getStoreForMode(context.mode).getCurrentTurn(table.tableId)
@@ -793,26 +884,6 @@ export const createIo = (server: http.Server) => {
 
     return io
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

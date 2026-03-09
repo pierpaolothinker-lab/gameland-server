@@ -3,7 +3,7 @@ import { AddressInfo } from 'net'
 import { createServer, Server as HttpServer } from 'http'
 import { Server as IoServer } from 'socket.io'
 import app from '../../../src/app'
-import { createIo, resolveTurnTimeoutSeconds, TURN_TIMEOUT_SECONDS } from '../../../src/sockets'
+import { createIo, resolveTrickRevealMs, resolveTurnTimeoutSeconds, TRICK_REVEAL_MS, TURN_TIMEOUT_SECONDS } from '../../../src/sockets'
 import { tressetteTableStore } from '../../../src/tressette/tressette-table.store'
 import { resetStoresForTests } from '../../../src/tressette/tressette-mode.store'
 import { clearStartPipelineDispatcher } from '../../../src/tressette/tressette-start.pipeline'
@@ -11,10 +11,12 @@ import { clearStartPipelineDispatcher } from '../../../src/tressette/tressette-s
 describe('turn timeout defaults', () => {
     const previousNodeEnv = process.env.NODE_ENV
     const previousTimeoutEnv = process.env.TRESSETTE_TURN_TIMEOUT_SECONDS
+    const previousRevealEnv = process.env.TRESSETTE_TRICK_REVEAL_MS
 
     afterEach(() => {
         process.env.NODE_ENV = previousNodeEnv
         process.env.TRESSETTE_TURN_TIMEOUT_SECONDS = previousTimeoutEnv
+        process.env.TRESSETTE_TRICK_REVEAL_MS = previousRevealEnv
     })
 
     test('non-production default timeout is 5 seconds', () => {
@@ -36,6 +38,14 @@ describe('turn timeout defaults', () => {
         process.env.TRESSETTE_TURN_TIMEOUT_SECONDS = '9'
 
         expect(resolveTurnTimeoutSeconds()).toBe(9)
+    })
+
+    test('trick reveal default is 2000ms and supports env override', () => {
+        delete process.env.TRESSETTE_TRICK_REVEAL_MS
+        expect(resolveTrickRevealMs()).toBe(2000)
+
+        process.env.TRESSETTE_TRICK_REVEAL_MS = '3500'
+        expect(resolveTrickRevealMs()).toBe(3500)
     })
 })
 
@@ -197,6 +207,82 @@ describe('Tressette start event chain', () => {
         }
     })
 
+    test('trick-ended delays next turn-started by reveal window and does not schedule turn timeout early', async () => {
+        const created = tressetteTableStore.create({ owner: 'Pierpaolo' })
+        tressetteTableStore.join({ tableId: created.tableId, username: 'Vito', position: 'NORD' })
+        tressetteTableStore.join({ tableId: created.tableId, username: 'Tonino', position: 'EST' })
+        tressetteTableStore.join({ tableId: created.tableId, username: 'Paolo', position: 'OVEST' })
+
+        const emitted: Array<{ event: string, payload: any }> = []
+        const scheduled: Array<{ callback: () => void, delay: number }> = []
+
+        const toSpy = jest.spyOn(io, 'to').mockImplementation((_room: string) => {
+            return {
+                emit: (event: string, payload: any) => {
+                    emitted.push({ event, payload })
+                }
+            } as any
+        })
+
+        const timeoutSpy = jest.spyOn(global, 'setTimeout').mockImplementation(((callback: TimerHandler, delay?: number) => {
+            scheduled.push({ callback: callback as () => void, delay: Number(delay) })
+            return { mocked: true } as any
+        }) as typeof setTimeout)
+
+        const intervalSpy = jest.spyOn(global, 'setInterval').mockImplementation(((..._args: any[]) => {
+            return { mockedInterval: true } as any
+        }) as typeof setInterval)
+
+        try {
+            const response = await fetch(`${baseUrl}/api/tressette/tables/${created.tableId}/start?mode=live`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username: 'Pierpaolo' })
+            })
+
+            expect(response.status).toBe(200)
+            expect(scheduled[0].delay).toBe(TURN_TIMEOUT_SECONDS * 1000)
+
+            const initialTurnStartedCount = emitted.filter((entry) => entry.event === 'tressette:turn-started').length
+
+            scheduled[0].callback()
+            scheduled[1].callback()
+            scheduled[2].callback()
+            const turnStartedBeforeFourth = emitted.filter((entry) => entry.event === 'tressette:turn-started').length
+            scheduled[3].callback()
+
+            const trickEndedIndex = emitted.findIndex((entry) => entry.event === 'tressette:trick-ended')
+            const turnStartedAfterFourth = emitted.filter((entry) => entry.event === 'tressette:turn-started').length
+
+            expect(trickEndedIndex).toBeGreaterThanOrEqual(0)
+            expect(turnStartedAfterFourth).toBe(turnStartedBeforeFourth)
+
+            const revealTimeout = scheduled.find((entry) => entry.delay === TRICK_REVEAL_MS)
+            expect(revealTimeout).toBeDefined()
+
+            const countBeforeReveal = emitted.filter((entry) => entry.event === 'tressette:turn-started').length
+            revealTimeout!.callback()
+            const countAfterReveal = emitted.filter((entry) => entry.event === 'tressette:turn-started').length
+
+            expect(countAfterReveal).toBe(countBeforeReveal + 1)
+            expect(countAfterReveal).toBeGreaterThan(initialTurnStartedCount)
+
+            const latestTurnStarted = emitted
+                .filter((entry) => entry.event === 'tressette:turn-started')
+                .at(-1)
+            expect(latestTurnStarted?.payload.turnDeadlineMs).toEqual(expect.any(Number))
+
+            const hasPostRevealTurnTimeout = scheduled.some((entry, idx) => idx > 0 && entry.delay === TURN_TIMEOUT_SECONDS * 1000)
+            expect(hasPostRevealTurnTimeout).toBe(true)
+            expect(timeoutSpy).toHaveBeenCalled()
+            expect(intervalSpy).toHaveBeenCalled()
+        } finally {
+            intervalSpy.mockRestore()
+            timeoutSpy.mockRestore()
+            toSpy.mockRestore()
+        }
+    })
+
     test('timeout autoplay emits private player-state with coherent hand and trick reset', async () => {
         const created = tressetteTableStore.create({ owner: 'Pierpaolo' })
         tressetteTableStore.join({ tableId: created.tableId, username: 'Vito', position: 'NORD' })
@@ -315,6 +401,85 @@ describe('Tressette start event chain', () => {
             toSpy.mockRestore()
         }
     })
+
+    test('end-of-hand emits hand-ended then hand-started for next hand', async () => {
+        const created = tressetteTableStore.create({ owner: 'Pierpaolo' })
+        tressetteTableStore.join({ tableId: created.tableId, username: 'Vito', position: 'NORD' })
+        tressetteTableStore.join({ tableId: created.tableId, username: 'Tonino', position: 'EST' })
+        tressetteTableStore.join({ tableId: created.tableId, username: 'Paolo', position: 'OVEST' })
+
+        const emitted: Array<{ event: string, payload: any }> = []
+        const scheduledCallbacks: Array<() => void> = []
+
+        const toSpy = jest.spyOn(io, 'to').mockImplementation((_room: string) => {
+            return {
+                emit: (event: string, payload: any) => {
+                    emitted.push({ event, payload })
+                }
+            } as any
+        })
+
+        const timeoutSpy = jest.spyOn(global, 'setTimeout').mockImplementation(((callback: TimerHandler) => {
+            scheduledCallbacks.push(callback as () => void)
+            return { mocked: true } as any
+        }) as typeof setTimeout)
+
+        const intervalSpy = jest.spyOn(global, 'setInterval').mockImplementation(((..._args: any[]) => {
+            return { mockedInterval: true } as any
+        }) as typeof setInterval)
+
+        try {
+            const response = await fetch(`${baseUrl}/api/tressette/tables/${created.tableId}/start?mode=live`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username: 'Pierpaolo' })
+            })
+
+            expect(response.status).toBe(200)
+
+            let cursor = 0
+            let safety = 0
+            let sawHandEnded = false
+            let sawHand2Started = false
+            while ((!sawHandEnded || !sawHand2Started) && safety < 400) {
+                const callback = scheduledCallbacks[cursor]
+                if (!callback) {
+                    break
+                }
+
+                callback()
+                cursor += 1
+                safety += 1
+                sawHandEnded = emitted.some((entry) => entry.event === 'tressette:hand-ended')
+                sawHand2Started = emitted.some(
+                    (entry) => entry.event === 'tressette:hand-started' && entry.payload?.handNumber === 2
+                )
+            }
+
+            const handEnded = emitted.find((entry) => entry.event === 'tressette:hand-ended')
+            expect(handEnded).toBeDefined()
+            expect(handEnded?.payload).toEqual(
+                expect.objectContaining({
+                    tableId: created.tableId,
+                    handNumber: 1,
+                    gameEnded: false
+                })
+            )
+
+            const handStartedEvents = emitted.filter((entry) => entry.event === 'tressette:hand-started')
+            expect(sawHandEnded).toBe(true)
+            expect(sawHand2Started).toBe(true)
+            expect(handStartedEvents.length).toBeGreaterThanOrEqual(2)
+            expect(handStartedEvents[0].payload.handNumber).toBe(1)
+            expect(handStartedEvents[1].payload.handNumber).toBe(2)
+        } finally {
+            intervalSpy.mockRestore()
+            timeoutSpy.mockRestore()
+            toSpy.mockRestore()
+        }
+    })
 })
+
+
 
 

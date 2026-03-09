@@ -44,7 +44,8 @@ Consolidare `dev` con test interattivi stabili su lobby/gameplay realtime e chiu
 
 ## Decision log
 - `main` production-only, `dev` integration-only.
-- Ogni task su branch nuovo da `dev`, PR verso `dev`, branch eliminato post-merge.
+- Regola operativa primaria: finche il task corrente non e chiuso (GUI validata + PR merged + cleanup), si continua sullo stesso branch task.
+- Nuovo branch da `dev` solo dopo chiusura del branch corrente, salvo eccezioni approvate esplicitamente.
 - Nessun push diretto implementativo su `dev`: merge solo con required checks GitHub verdi.
 - Realtime standardizzato su Socket.IO end-to-end.
 - Persistenza in-memory in MVP, Mongo nella fase beta hardening.
@@ -53,4 +54,6 @@ Consolidare `dev` con test interattivi stabili su lobby/gameplay realtime e chiu
 - Strategia identita utente (mock session -> auth reale).
 - Politica reconnect/disconnect in mano attiva.
 - Ambiente target staging e criteri SLA beta.
+
+
 
