@@ -80,7 +80,7 @@ Client -> server:
 
 Server -> client:
 - `tressette:mode-selected`
-- `tressette:table-updated`
+- `tressette:table-updated` (including immediate snapshot on `tressette:watch-table`)
 - `tressette:hand-started`
 - `tressette:turn-started` `{ tableId, mode, trickNumber, currentPlayer, turnDeadlineMs, secondsRemaining, timeoutSeconds }`
 - `tressette:turn-updated` `{ tableId, mode, trickNumber, currentPlayer, turnDeadlineMs, secondsRemaining, timeoutSeconds }`
@@ -95,7 +95,7 @@ Server -> client:
 - On timeout, server auto-plays a random playable card and emits normal play chain.
 
 ### Bootstrap rule
-If table is already `in_game`, bootstrap/reconnect must receive current turn immediately (via `turn-bootstrap` and/or HTTP `currentTurn`) without waiting for next action.
+If `tressette:watch-table` is requested and table is already `in_game`, backend must emit immediate `tressette:turn-bootstrap` with `{ tableId, mode, trickNumber, currentPlayer, turnDeadlineMs, secondsRemaining, timeoutSeconds }` without waiting for next action.
 
 ## Table model
 - `tableId: string`
@@ -140,5 +140,6 @@ When backend changes any endpoint/payload/event:
 1. Update this file in the same PR/commit.
 2. Add a short "Contract changes" section in PR notes.
 3. Notify frontend thread with exact changed payload examples.
+
 
 

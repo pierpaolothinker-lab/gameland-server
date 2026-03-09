@@ -1,6 +1,6 @@
 import { Server } from 'socket.io'
 import * as http from 'http'
-import { tressetteTableStore, TressettePlayCardStoreResult, TressetteStoreError } from './tressette/tressette-table.store'
+import { TressettePlayCardStoreResult, TressetteStoreError } from './tressette/tressette-table.store'
 import {
     TRESSETTE_POSITIONS,
     TressetteCard,
@@ -33,6 +33,28 @@ type PlayCardPayload = {
     tableId?: unknown
     username?: unknown
     card?: unknown
+}
+
+type WatchTablePayload = {
+    tableId?: unknown
+}
+
+type WatchBootstrapSocket = {
+    join: (room: string) => void
+    emit: (event: string, payload: unknown) => void
+}
+
+export type TurnBootstrapPayload = {
+    tableId: string
+    mode: TressetteMode
+    trickNumber: number
+    currentPlayer: {
+        username: string
+        position: TressettePosition | null
+    }
+    turnDeadlineMs: number
+    secondsRemaining: number
+    timeoutSeconds: number
 }
 
 export const TURN_TIMEOUT_SECONDS = 20
@@ -79,6 +101,61 @@ const readCard = (value: unknown): TressetteCard | null => {
 
 const tableRoom = (mode: TressetteMode, tableId: string): string => `tressette:table:${mode}:${tableId}`
 const turnKey = (mode: TressetteMode, tableId: string): string => `${mode}:${tableId}`
+
+const resolveCurrentPlayer = (table: TressetteTable, turnPlayer: string): TressetteTablePlayer | null => {
+    return table.players.find((player) => player.username === turnPlayer) ?? null
+}
+
+const buildTurnBootstrapPayload = (
+    mode: TressetteMode,
+    table: TressetteTable,
+    turn: TressetteTurnState,
+    currentPlayer: TressetteTablePlayer | null,
+    turnDeadlineMs: number
+): TurnBootstrapPayload => {
+    return {
+        tableId: table.tableId,
+        mode,
+        trickNumber: turn.trickNumber,
+        currentPlayer: {
+            username: turn.turnPlayer,
+            position: currentPlayer?.position ?? null
+        },
+        turnDeadlineMs,
+        secondsRemaining: Math.max(0, Math.ceil((turnDeadlineMs - Date.now()) / 1000)),
+        timeoutSeconds: TURN_TIMEOUT_SECONDS
+    }
+}
+
+export const emitWatchTableBootstrap = (
+    mode: TressetteMode,
+    tableId: string,
+    socket: WatchBootstrapSocket,
+    turnDeadlines: Map<string, number>
+): void => {
+    const store = getStoreForMode(mode)
+    const table = store.getById(tableId)
+
+    socket.join(tableRoom(mode, tableId))
+    socket.emit('tressette:table-updated', {
+        ...table,
+        mode
+    })
+
+    if (table.status !== 'in_game') {
+        return
+    }
+
+    const currentTurn = store.getCurrentTurn(tableId)
+    if (!currentTurn) {
+        return
+    }
+
+    const currentPlayer = resolveCurrentPlayer(table, currentTurn.turnPlayer)
+    const turnDeadlineMs = turnDeadlines.get(turnKey(mode, table.tableId)) ?? (Date.now() + TURN_TIMEOUT_MS)
+
+    socket.emit('tressette:turn-bootstrap', buildTurnBootstrapPayload(mode, table, currentTurn, currentPlayer, turnDeadlineMs))
+}
 
 const emitStoreError = (socket: any, error: unknown) => {
     if (error instanceof TressetteStoreError) {
@@ -147,10 +224,6 @@ const getTableStatusSafe = (mode: TressetteMode, tableId: string): 'waiting' | '
     }
 }
 
-const resolveCurrentPlayer = (table: TressetteTable, turnPlayer: string): TressetteTablePlayer | null => {
-    return table.players.find((player) => player.username === turnPlayer) ?? null
-}
-
 export const createIo = (server: http.Server) => {
     const io = new Server(server, {
         cors: {
@@ -172,6 +245,7 @@ export const createIo = (server: http.Server) => {
 
     const turnTimeouts = new Map<string, NodeJS.Timeout>()
     const turnTickers = new Map<string, NodeJS.Timeout>()
+    const turnDeadlines = new Map<string, number>()
 
     const clearTurnTimeout = (mode: TressetteMode, tableId: string) => {
         const key = turnKey(mode, tableId)
@@ -202,20 +276,10 @@ export const createIo = (server: http.Server) => {
         currentPlayer: TressetteTablePlayer | null,
         turnDeadlineMs: number
     ) => {
-        const secondsRemaining = Math.max(0, Math.ceil((turnDeadlineMs - Date.now()) / 1000))
-
-        io.to(tableRoom(mode, table.tableId)).emit('tressette:turn-updated', {
-            tableId: table.tableId,
-            trickNumber: turn.trickNumber,
-            mode,
-            currentPlayer: {
-                username: turn.turnPlayer,
-                position: currentPlayer?.position ?? null
-            },
-            turnDeadlineMs,
-            secondsRemaining,
-            timeoutSeconds: TURN_TIMEOUT_SECONDS
-        })
+        io.to(tableRoom(mode, table.tableId)).emit(
+            'tressette:turn-updated',
+            buildTurnBootstrapPayload(mode, table, turn, currentPlayer, turnDeadlineMs)
+        )
     }
 
     const startTurnTicker = (
@@ -246,19 +310,12 @@ export const createIo = (server: http.Server) => {
 
         const currentPlayer = resolveCurrentPlayer(table, turn.turnPlayer)
         const turnDeadlineMs = Date.now() + TURN_TIMEOUT_MS
+        turnDeadlines.set(turnKey(mode, table.tableId), turnDeadlineMs)
 
-        io.to(tableRoom(mode, table.tableId)).emit('tressette:turn-started', {
-            tableId: table.tableId,
-            trickNumber: turn.trickNumber,
-            mode,
-            currentPlayer: {
-                username: turn.turnPlayer,
-                position: currentPlayer?.position ?? null
-            },
-            turnDeadlineMs,
-            secondsRemaining: TURN_TIMEOUT_SECONDS,
-            timeoutSeconds: TURN_TIMEOUT_SECONDS
-        })
+        io.to(tableRoom(mode, table.tableId)).emit(
+            'tressette:turn-started',
+            buildTurnBootstrapPayload(mode, table, turn, currentPlayer, turnDeadlineMs)
+        )
 
         startTurnTicker(mode, table, turn, currentPlayer, turnDeadlineMs)
 
@@ -275,6 +332,7 @@ export const createIo = (server: http.Server) => {
                 emitPlayFlow(mode, result)
             } catch (error: unknown) {
                 clearTurnTimeout(mode, table.tableId)
+                turnDeadlines.delete(turnKey(mode, table.tableId))
                 emitStoreErrorToRoom(io, mode, table.tableId, error)
             }
         }, TURN_TIMEOUT_MS)
@@ -317,7 +375,10 @@ export const createIo = (server: http.Server) => {
 
         if (play.nextTurn && table.status === 'in_game') {
             emitTurnStarted(mode, table, play.nextTurn)
+            return
         }
+
+        turnDeadlines.delete(turnKey(mode, table.tableId))
     }
 
     const emitStartPipeline = (context: StartPipelineContext) => {
@@ -395,6 +456,29 @@ export const createIo = (server: http.Server) => {
                 emitStoreError(socket, error)
             }
         })
+
+        const watchTableHandler = (payload: WatchTablePayload) => {
+            const tableId = readNonEmptyString(payload?.tableId)
+
+            if (!tableId) {
+                socket.emit('tressette:error', {
+                    error: {
+                        code: 'VALIDATION_ERROR',
+                        message: 'tableId is required'
+                    }
+                })
+                return
+            }
+
+            try {
+                emitWatchTableBootstrap(socketMode, tableId, socket, turnDeadlines)
+            } catch (error: unknown) {
+                emitStoreError(socket, error)
+            }
+        }
+
+        socket.on('tressette:watch-table', watchTableHandler)
+        socket.on('tressette:bootstrap-table', watchTableHandler)
 
         socket.on('tressette:leave-table', (payload: LeaveTablePayload) => {
             const tableId = readNonEmptyString(payload?.tableId)
