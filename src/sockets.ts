@@ -61,7 +61,19 @@ export type TurnBootstrapPayload = {
     timeoutSeconds: number
 }
 
-export const TURN_TIMEOUT_SECONDS = 20
+export const resolveTurnTimeoutSeconds = (): number => {
+    const raw = process.env.TRESSETTE_TURN_TIMEOUT_SECONDS
+    if (raw) {
+        const parsed = Number(raw)
+        if (Number.isInteger(parsed) && parsed > 0) {
+            return parsed
+        }
+    }
+
+    return process.env.NODE_ENV === 'production' ? 20 : 5
+}
+
+export const TURN_TIMEOUT_SECONDS = resolveTurnTimeoutSeconds()
 const TURN_TIMEOUT_MS = TURN_TIMEOUT_SECONDS * 1000
 
 const ALLOWED_SOCKET_ORIGINS = ['http://localhost:4200', 'http://localhost:4400', 'http://localhost:8100']
@@ -130,6 +142,26 @@ const readMyHandSafe = (mode: TressetteMode, tableId: string, username: string |
     }
 }
 
+
+const getSocketTableUsersMap = (socket: any): Map<string, string> => {
+    if (!socket.data.__tressetteTableUsers) {
+        socket.data.__tressetteTableUsers = new Map<string, string>()
+    }
+
+    return socket.data.__tressetteTableUsers as Map<string, string>
+}
+
+const setSocketTableUsername = (socket: any, mode: TressetteMode, tableId: string, username: string | null): void => {
+    if (!username) {
+        return
+    }
+
+    getSocketTableUsersMap(socket).set(turnKey(mode, tableId), username)
+}
+
+const getSocketTableUsername = (socket: any, mode: TressetteMode, tableId: string): string | null => {
+    return getSocketTableUsersMap(socket).get(turnKey(mode, tableId)) ?? null
+}
 const buildTurnBootstrapPayload = (
     mode: TressetteMode,
     table: TressetteTable,
@@ -304,6 +336,32 @@ export const createIo = (server: http.Server) => {
         turnTickers.delete(key)
     }
 
+    const emitPerUserStateRefresh = (mode: TressetteMode, tableId: string) => {
+        const room = io.sockets.adapter.rooms.get(tableRoom(mode, tableId))
+        if (!room) {
+            return
+        }
+
+        const currentTrick = readCurrentTrickSafe(mode, tableId)
+
+        room.forEach((socketId) => {
+            const roomSocket = io.sockets.sockets.get(socketId)
+            if (!roomSocket) {
+                return
+            }
+
+            const username = getSocketTableUsername(roomSocket, mode, tableId)
+            const myHand = readMyHandSafe(mode, tableId, username)
+
+            roomSocket.emit('tressette:player-state', {
+                tableId,
+                mode,
+                currentTrick,
+                myHand
+            })
+        })
+    }
+
     const emitTurnUpdated = (
         mode: TressetteMode,
         table: TressetteTable,
@@ -412,6 +470,8 @@ export const createIo = (server: http.Server) => {
             currentTrick: readCurrentTrickSafe(mode, table.tableId)
         })
 
+        emitPerUserStateRefresh(mode, table.tableId)
+
         if (play.nextTurn && table.status === 'in_game') {
             emitTurnStarted(mode, table, play.nextTurn)
             return
@@ -487,6 +547,7 @@ export const createIo = (server: http.Server) => {
 
             try {
                 const table = store.join({ tableId, username, position })
+                setSocketTableUsername(socket, socketMode, tableId, username)
                 socket.join(tableRoom(socketMode, tableId))
                 io.to(tableRoom(socketMode, tableId)).emit('tressette:table-updated', {
                     ...table,
@@ -513,6 +574,7 @@ export const createIo = (server: http.Server) => {
             }
 
             try {
+                setSocketTableUsername(socket, socketMode, tableId, username)
                 emitWatchTableBootstrap(socketMode, tableId, socket, turnDeadlines, username)
             } catch (error: unknown) {
                 emitStoreError(socket, error)
@@ -567,6 +629,7 @@ export const createIo = (server: http.Server) => {
 
             try {
                 const table = store.start({ tableId, username })
+                setSocketTableUsername(socket, socketMode, tableId, username)
                 socket.join(tableRoom(socketMode, tableId))
 
                 emitStartPipeline({
@@ -617,6 +680,7 @@ export const createIo = (server: http.Server) => {
                     card
                 })
 
+                setSocketTableUsername(socket, socketMode, tableId, username)
                 socket.join(tableRoom(socketMode, tableId))
                 emitPlayFlow(socketMode, result)
                 emitWatchTableBootstrap(socketMode, tableId, socket, turnDeadlines, username)
@@ -628,3 +692,11 @@ export const createIo = (server: http.Server) => {
 
     return io
 }
+
+
+
+
+
+
+
+

@@ -3,11 +3,41 @@ import { AddressInfo } from 'net'
 import { createServer, Server as HttpServer } from 'http'
 import { Server as IoServer } from 'socket.io'
 import app from '../../../src/app'
-import { createIo, TURN_TIMEOUT_SECONDS } from '../../../src/sockets'
+import { createIo, resolveTurnTimeoutSeconds, TURN_TIMEOUT_SECONDS } from '../../../src/sockets'
 import { tressetteTableStore } from '../../../src/tressette/tressette-table.store'
 import { resetStoresForTests } from '../../../src/tressette/tressette-mode.store'
 import { clearStartPipelineDispatcher } from '../../../src/tressette/tressette-start.pipeline'
 
+describe('turn timeout defaults', () => {
+    const previousNodeEnv = process.env.NODE_ENV
+    const previousTimeoutEnv = process.env.TRESSETTE_TURN_TIMEOUT_SECONDS
+
+    afterEach(() => {
+        process.env.NODE_ENV = previousNodeEnv
+        process.env.TRESSETTE_TURN_TIMEOUT_SECONDS = previousTimeoutEnv
+    })
+
+    test('non-production default timeout is 5 seconds', () => {
+        process.env.NODE_ENV = 'development'
+        delete process.env.TRESSETTE_TURN_TIMEOUT_SECONDS
+
+        expect(resolveTurnTimeoutSeconds()).toBe(5)
+    })
+
+    test('production default timeout is 20 seconds', () => {
+        process.env.NODE_ENV = 'production'
+        delete process.env.TRESSETTE_TURN_TIMEOUT_SECONDS
+
+        expect(resolveTurnTimeoutSeconds()).toBe(20)
+    })
+
+    test('env timeout override wins when valid', () => {
+        process.env.NODE_ENV = 'development'
+        process.env.TRESSETTE_TURN_TIMEOUT_SECONDS = '9'
+
+        expect(resolveTurnTimeoutSeconds()).toBe(9)
+    })
+})
 describe('Tressette start event chain', () => {
     let server: HttpServer
     let io: IoServer
@@ -164,4 +194,5 @@ describe('Tressette start event chain', () => {
         }
     })
 })
+
 

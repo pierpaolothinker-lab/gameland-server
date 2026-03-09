@@ -87,15 +87,16 @@ Server -> client:
 - `tressette:turn-bootstrap` `{ tableId, mode, trickNumber, currentPlayer, currentTrick, myHand, turnDeadlineMs, secondsRemaining, timeoutSeconds }` (`myHand` is populated only for the requesting `username`)
 - `tressette:card-played` `{ tableId, mode, trickNumber, username, card, source, currentTrick }`
   - `source`: `manual | timeout_auto`
+- `tressette:player-state` `{ tableId, mode, currentTrick, myHand }` emitted per-user after each play (manual/timeout_auto) to keep hand/trick authoritative and in sync.
 - `tressette:trick-ended` `{ tableId, mode, trickNumber, winner, trickPoints, scoreSN, scoreEO }`
 - `tressette:error`
 
 ### Timeout/autoplay
-- Turn timeout: `20s` (server-authoritative)
+- Turn timeout (server-authoritative):
+  - non-production default: `5s`
+  - production default: `20s`
+  - override via env `TRESSETTE_TURN_TIMEOUT_SECONDS` (positive integer).
 - On timeout, server auto-plays a random playable card and emits normal play chain.
-
-### Bootstrap rule
-If `tressette:watch-table` is requested and table is already `in_game`, backend must emit immediate `tressette:turn-bootstrap` with `{ tableId, mode, trickNumber, currentPlayer, currentTrick, myHand, turnDeadlineMs, secondsRemaining, timeoutSeconds }` without waiting for next action. `myHand` is returned only for the requesting user and never broadcast for other players.
 
 ## Table model
 - `tableId: string`
@@ -140,6 +141,7 @@ When backend changes any endpoint/payload/event:
 1. Update this file in the same PR/commit.
 2. Add a short "Contract changes" section in PR notes.
 3. Notify frontend thread with exact changed payload examples.
+
 
 
 

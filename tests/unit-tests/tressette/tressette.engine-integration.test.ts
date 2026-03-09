@@ -65,6 +65,8 @@ describe('Tressette engine integration', () => {
         expect(handAfter.some((card) => card.suit === selectedCard.suit && card.value === selectedCard.value)).toBe(false)
         expect(result.play.card).toEqual(selectedCard)
         expect(result.play.currentTrick).toHaveLength(1)
+        expect(result.play.currentTrick[0].card).toEqual(selectedCard)
+        expect(handAfter.some((card) => card.suit === result.play.currentTrick[0].card.suit && card.value === result.play.currentTrick[0].card.value)).toBe(false)
     })
 
     test('manual card not in player hand returns CARD_NOT_OWNED', () => {
@@ -179,4 +181,5 @@ describe('Tressette engine integration', () => {
         }
     })
 })
+
 
