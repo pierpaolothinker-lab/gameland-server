@@ -64,3 +64,9 @@
 - Branch: dev
 - Summary: Enforced strict branch lifecycle: fresh branch from dev per task, PR to dev, delete branch after merge
 - Validation: Docs updated in governance/prompt/contract + decisions/journal
+
+## 2026-03-08 21:09 - governance-policy-and-app-cleanup
+- Repo: root
+- Branch: dev
+- Summary: Applied strict branch lifecycle policy and completed full app branch cleanup: only main/dev remain local and remote
+- Validation: server dev pushed with policy docs; app origin cleaned to main/dev; local app branches pruned
