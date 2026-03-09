@@ -75,6 +75,7 @@ Client -> server:
 - `tressette:leave-table` `{ tableId, username }`
 - `tressette:start-game` `{ tableId, username }`
 - `tressette:play-card` `{ tableId, username, card? }`
+  - Manual play must follow lead suit when player owns at least one lead-suit card (`INVALID_SUIT_RESPONSE`, `409`).
 - `tressette:watch-table` `{ tableId, username? }`
 - `tressette:bootstrap-table` `{ tableId }`
 
@@ -134,6 +135,7 @@ Server -> client:
 - `NOT_PLAYER_TURN` (`409`)
 - `INVALID_CARD` (`400`)
 - `CARD_NOT_OWNED` (`409`)
+- `INVALID_SUIT_RESPONSE` (`409`)
 - `HAND_ALREADY_COMPLETED` (`409`)
 
 ## Change policy
@@ -141,10 +143,4 @@ When backend changes any endpoint/payload/event:
 1. Update this file in the same PR/commit.
 2. Add a short "Contract changes" section in PR notes.
 3. Notify frontend thread with exact changed payload examples.
-
-
-
-
-
-
 
