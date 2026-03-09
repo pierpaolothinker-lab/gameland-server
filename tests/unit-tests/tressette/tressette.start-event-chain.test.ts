@@ -258,6 +258,7 @@ describe('Tressette start event chain', () => {
             expect(firstPrivateState.myHand).toEqual(expect.any(Array))
             expect(firstPrivateState.currentTrick).toEqual(expect.any(Array))
             expect(firstPrivateState.currentTurn).toEqual(expect.objectContaining({ username: expect.any(String) }))
+            expect(firstPrivateState.lastCompletedTrick).toBeUndefined()
             expect(firstPrivateState.myHand.some((card: { suit: number, value: number }) => (
                 card.suit === firstCardPlayed?.payload.card.suit && card.value === firstCardPlayed?.payload.card.value
             ))).toBe(false)
@@ -280,6 +281,10 @@ describe('Tressette start event chain', () => {
                     username: expect.any(String)
                 })
             )
+            expect(lastPrivateState.lastCompletedTrick).toEqual(expect.any(Array))
+            expect(lastPrivateState.lastCompletedTrick).toHaveLength(4)
+            expect(lastPrivateState.lastTrickWinner).toEqual(expect.any(String))
+            expect(lastPrivateState.lastTrickWinnerPosition).toEqual(expect.any(String))
 
             const trickEndedEvent = emitted.find((entry) => entry.event === 'tressette:trick-ended')
             expect(trickEndedEvent).toBeDefined()
@@ -311,4 +316,5 @@ describe('Tressette start event chain', () => {
         }
     })
 })
+
 

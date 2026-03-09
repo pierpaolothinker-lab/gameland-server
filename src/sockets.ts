@@ -46,6 +46,12 @@ type WatchBootstrapSocket = {
     emit: (event: string, payload: unknown) => void
 }
 
+type LastCompletedTrickMetadata = {
+    lastTrickWinner: string
+    lastTrickWinnerPosition: TressettePosition | null
+    lastCompletedTrick: TressetteCurrentTrickPlay[]
+}
+
 type PlayerStatePayload = {
     tableId: string
     mode: TressetteMode
@@ -60,6 +66,9 @@ type PlayerStatePayload = {
     timeoutSeconds: number
     status: TressetteTable['status']
     points: TressetteTable['points']
+    lastTrickWinner?: string
+    lastTrickWinnerPosition?: TressettePosition | null
+    lastCompletedTrick?: TressetteCurrentTrickPlay[]
 }
 export type TurnBootstrapPayload = {
     tableId: string
@@ -207,7 +216,8 @@ export const buildPlayerStatePayload = (
     mode: TressetteMode,
     tableId: string,
     username: string,
-    turnDeadlines: Map<string, number>
+    turnDeadlines: Map<string, number>,
+    revealMetadataByTable: Map<string, LastCompletedTrickMetadata>
 ): PlayerStatePayload | null => {
     try {
         const store = getStoreForMode(mode)
@@ -222,6 +232,7 @@ export const buildPlayerStatePayload = (
         const deadline = currentTurn
             ? (turnDeadlines.get(turnKey(mode, tableId)) ?? (Date.now() + TURN_TIMEOUT_MS))
             : null
+        const revealMetadata = revealMetadataByTable.get(turnKey(mode, tableId))
 
         return {
             tableId,
@@ -238,7 +249,10 @@ export const buildPlayerStatePayload = (
             secondsRemaining: deadline ? Math.max(0, Math.ceil((deadline - Date.now()) / 1000)) : 0,
             timeoutSeconds: TURN_TIMEOUT_SECONDS,
             status: table.status,
-            points: table.points
+            points: table.points,
+            lastTrickWinner: revealMetadata?.lastTrickWinner,
+            lastTrickWinnerPosition: revealMetadata?.lastTrickWinnerPosition,
+            lastCompletedTrick: revealMetadata?.lastCompletedTrick
         }
     } catch (_error: unknown) {
         return null
@@ -250,13 +264,14 @@ const emitPlayerStateToSocket = (
     mode: TressetteMode,
     tableId: string,
     turnDeadlines: Map<string, number>,
+    revealMetadataByTable: Map<string, LastCompletedTrickMetadata>,
     username: string | null
 ): void => {
     if (!username) {
         return
     }
 
-    const payload = buildPlayerStatePayload(mode, tableId, username, turnDeadlines)
+    const payload = buildPlayerStatePayload(mode, tableId, username, turnDeadlines, revealMetadataByTable)
     if (!payload) {
         return
     }
@@ -268,6 +283,7 @@ export const emitWatchTableBootstrap = (
     tableId: string,
     socket: WatchBootstrapSocket,
     turnDeadlines: Map<string, number>,
+    revealMetadataByTable: Map<string, LastCompletedTrickMetadata>,
     username: string | null = null
 ): void => {
     const store = getStoreForMode(mode)
@@ -280,7 +296,7 @@ export const emitWatchTableBootstrap = (
         mode,
         currentTrick
     })
-    emitPlayerStateToSocket(socket, mode, tableId, turnDeadlines, username)
+    emitPlayerStateToSocket(socket, mode, tableId, turnDeadlines, revealMetadataByTable, username)
 
     if (table.status !== 'in_game') {
         return
@@ -390,6 +406,7 @@ export const createIo = (server: http.Server) => {
     const turnTimeouts = new Map<string, NodeJS.Timeout>()
     const turnTickers = new Map<string, NodeJS.Timeout>()
     const turnDeadlines = new Map<string, number>()
+    const lastCompletedTrickByTable = new Map<string, LastCompletedTrickMetadata>()
 
     const clearTurnTimeout = (mode: TressetteMode, tableId: string) => {
         const key = turnKey(mode, tableId)
@@ -413,9 +430,12 @@ export const createIo = (server: http.Server) => {
         turnTickers.delete(key)
     }
 
-    const emitPerUserStateRefresh = (mode: TressetteMode, tableId: string) => {
+    const emitPerUserStateRefresh = (mode: TressetteMode, tableId: string, clearRevealMetadata = false) => {
         const room = io.sockets.adapter.rooms.get(tableRoom(mode, tableId))
         if (!room) {
+            if (clearRevealMetadata) {
+                lastCompletedTrickByTable.delete(turnKey(mode, tableId))
+            }
             return
         }
 
@@ -426,8 +446,12 @@ export const createIo = (server: http.Server) => {
             }
 
             const username = getSocketTableUsername(roomSocket, mode, tableId)
-            emitPlayerStateToSocket(roomSocket, mode, tableId, turnDeadlines, username)
+            emitPlayerStateToSocket(roomSocket, mode, tableId, turnDeadlines, lastCompletedTrickByTable, username)
         })
+
+        if (clearRevealMetadata) {
+            lastCompletedTrickByTable.delete(turnKey(mode, tableId))
+        }
     }
 
     const emitTurnUpdated = (
@@ -526,7 +550,7 @@ export const createIo = (server: http.Server) => {
                 trickNumber: play.trickEnded.trickNumber,
                 mode,
                 winner: play.trickEnded.winner,
-                winnerPosition: table.players.find((player) => player.username === play.trickEnded?.winner)?.position ?? null,
+                winnerPosition: play.trickEnded.winnerPosition,
                 trickCards: play.trickEnded.trickCards,
                 trickPoints: play.trickEnded.trickPoints,
                 scoreSN: play.trickEnded.scoreSN,
@@ -540,13 +564,21 @@ export const createIo = (server: http.Server) => {
             currentTrick: readCurrentTrickSafe(mode, table.tableId)
         })
 
+        if (play.trickEnded) {
+            lastCompletedTrickByTable.set(turnKey(mode, table.tableId), {
+                lastTrickWinner: play.trickEnded.winner,
+                lastTrickWinnerPosition: play.trickEnded.winnerPosition,
+                lastCompletedTrick: play.trickEnded.trickCards
+            })
+        }
+
         if (play.nextTurn && table.status === 'in_game') {
             emitTurnStarted(mode, table, play.nextTurn)
         } else {
             turnDeadlines.delete(turnKey(mode, table.tableId))
         }
 
-        emitPerUserStateRefresh(mode, table.tableId)
+        emitPerUserStateRefresh(mode, table.tableId, play.trickEnded !== null)
     }
 
     const emitStartPipeline = (context: StartPipelineContext) => {
@@ -644,7 +676,7 @@ export const createIo = (server: http.Server) => {
 
             try {
                 setSocketTableUsername(socket, socketMode, tableId, username)
-                emitWatchTableBootstrap(socketMode, tableId, socket, turnDeadlines, username)
+                emitWatchTableBootstrap(socketMode, tableId, socket, turnDeadlines, lastCompletedTrickByTable, username)
             } catch (error: unknown) {
                 emitStoreError(socket, error)
             }
@@ -709,7 +741,7 @@ export const createIo = (server: http.Server) => {
                     trigger: 'socket'
                 })
 
-                emitWatchTableBootstrap(socketMode, tableId, socket, turnDeadlines, username)
+                emitWatchTableBootstrap(socketMode, tableId, socket, turnDeadlines, lastCompletedTrickByTable, username)
             } catch (error: unknown) {
                 emitStoreError(socket, error)
             }
@@ -752,7 +784,7 @@ export const createIo = (server: http.Server) => {
                 setSocketTableUsername(socket, socketMode, tableId, username)
                 socket.join(tableRoom(socketMode, tableId))
                 emitPlayFlow(socketMode, result)
-                emitWatchTableBootstrap(socketMode, tableId, socket, turnDeadlines, username)
+                emitWatchTableBootstrap(socketMode, tableId, socket, turnDeadlines, lastCompletedTrickByTable, username)
             } catch (error: unknown) {
                 emitStoreError(socket, error)
             }
@@ -761,6 +793,14 @@ export const createIo = (server: http.Server) => {
 
     return io
 }
+
+
+
+
+
+
+
+
 
 
 
