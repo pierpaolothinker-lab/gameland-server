@@ -20,7 +20,7 @@
   - Turn timeout + autoplay chain implemented
   - Turn order and countdown payloads aligned in contract
 - Remaining:
-  - Turn bootstrap reliability in gameplay join/reconnect path (active fix)
+  - Turn bootstrap reliability in gameplay join/reconnect path (completed)
   - Observer mode
   - Reconnect/rejoin policy finalization
 
@@ -38,3 +38,6 @@
 - [2026-03-08 03:20] Render deployment plan documented while Task 8 execution is in progress.
 - [2026-03-08 04:43] Task 8 implementation completed on feature branches.
 - [2026-03-08 21:09] Repositories cleaned: only `main` + `dev` active (server/app).
+
+- [2026-03-09 02:34] Chiuso task authoritative hand/trick: gameplay ora backend-authoritative su mano+trick con reveal UX a fine trick.
+
