@@ -16,13 +16,16 @@ export class Trick3s4i {
     constructor() { }
 
     addPlay(play: Play): void {
-        if (!this.isComplete)
+        if (!this.isComplete) {
             this.plays.push({
                 player: play.player,
                 card: new Card3s7(play.card.suit, play.card.value)
             })
-        if (this.plays.length == 4)
+        }
+
+        if (this.plays.length === 4) {
             this.isComplete = true
+        }
     }
 
     setWinner() {
@@ -31,9 +34,8 @@ export class Trick3s4i {
         }
         const masterSuit = this.plays[0].card.suit
         const possibileWinners = this.plays
-            .filter(x => x.card.suit == masterSuit)
+            .filter((x) => x.card.suit === masterSuit)
             .sort((a, b) => b.card.getCardSovranity() - a.card.getCardSovranity())
-        // return possibileWinners[0].player
         this.winner = possibileWinners[0]
     }
 
@@ -42,17 +44,19 @@ export class Trick3s4i {
     }
 
     getTotalScore(): number {
-        // console.log('-----------SCORE---------',this.plays)
-        const test =  this.plays
-            .map(x => x.card.getCardScore())
+        return this.plays
+            .map((x) => x.card.getCardScore())
             .reduce((a, b) => a + b)
-
-        // console.log('winner', this.winner.player.username)
-        // console.log('calc', test)
-        return test
     }
 
     getCards(): ICardIT[] {
-        return this.plays.map(x => x.card)
+        return this.plays.map((x) => x.card)
+    }
+
+    getPlaysSnapshot(): Play3s7[] {
+        return this.plays.map((play) => ({
+            player: play.player,
+            card: new Card3s7(play.card.suit, play.card.value)
+        }))
     }
 }

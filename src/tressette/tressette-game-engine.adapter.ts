@@ -4,8 +4,9 @@ import { Position3s74i, Player3s74i } from '../domain/games/3s7/3s74i/player3s74
 import { Table3s74i } from '../domain/games/3s7/3s74i/table3s74i.model'
 import { Card3s7 } from '../domain/games/3s7/card3s7.model'
 import {
-    TressetteCard,
     PlayCardTressetteInput,
+    TressetteCard,
+    TressetteCurrentTrickPlay,
     TressettePlayCardOutcome,
     TressettePosition,
     TressetteTable,
@@ -38,7 +39,6 @@ type EngineSession = {
     handEnded: boolean
 }
 
-// 4 Incrociato turn order aligned with FE seats (example: Paolo -> Marta).
 const TURN_ORDER: Position3s74i[] = [
     Position3s74i.Sud,
     Position3s74i.Est,
@@ -66,6 +66,11 @@ export class TressetteGameEngineAdapter {
         const openerIndex = getRandomInteger(0, 3)
         engineTable.handOpenerIndex = openerIndex
         engineTable.distribuiteCards()
+
+        const handIsValid = engineTable.players.every((player) => player.getCardsSnapshot().length === 10)
+        if (!handIsValid) {
+            throw new TressetteGameEngineError('ENGINE_INIT_FAILED', 'invalid hand distribution from engine', 500)
+        }
 
         const session: EngineSession = {
             table: engineTable,
@@ -98,6 +103,29 @@ export class TressetteGameEngineAdapter {
             trickNumber: session.trickNumber,
             turnPlayer: turnPlayer.username
         }
+    }
+
+    getPlayerHand(tableId: string, username: string): TressetteCard[] {
+        const session = this.sessions.get(tableId)
+        if (!session) {
+            throw new TressetteGameEngineError('ENGINE_NOT_INITIALIZED', 'game engine session not initialized', 409)
+        }
+
+        const player = session.table.players.find((x) => x.username === username)
+        if (!player) {
+            throw new TressetteGameEngineError('PLAYER_NOT_FOUND', 'player not found at table', 404)
+        }
+
+        return player.getCardsSnapshot().map((card) => this.toPlainCard(card))
+    }
+
+    getCurrentTrick(tableId: string): TressetteCurrentTrickPlay[] {
+        const session = this.sessions.get(tableId)
+        if (!session) {
+            throw new TressetteGameEngineError('ENGINE_NOT_INITIALIZED', 'game engine session not initialized', 409)
+        }
+
+        return this.toCurrentTrickSnapshot(session)
     }
 
     playCard(tableSnapshot: TressetteTable, input: Omit<PlayCardTressetteInput, 'tableId'>): TressettePlayCardOutcome {
@@ -144,6 +172,7 @@ export class TressetteGameEngineAdapter {
             session.currentTurnIndex = this.nextTurnIndex(session, session.currentTurnIndex)
             return {
                 ...outcomeBase,
+                currentTrick: this.toCurrentTrickSnapshot(session),
                 nextTurn: this.getCurrentTurn(tableSnapshot.tableId),
                 trickEnded: null,
                 handEnded: false,
@@ -190,6 +219,7 @@ export class TressetteGameEngineAdapter {
             session.handEnded = true
             return {
                 ...outcomeBase,
+                currentTrick: [],
                 nextTurn: null,
                 trickEnded,
                 handEnded: true,
@@ -199,6 +229,7 @@ export class TressetteGameEngineAdapter {
 
         return {
             ...outcomeBase,
+            currentTrick: [],
             nextTurn: this.getCurrentTurn(tableSnapshot.tableId),
             trickEnded,
             handEnded: false,
@@ -216,10 +247,13 @@ export class TressetteGameEngineAdapter {
 
     private resolveCardToPlay(session: EngineSession, currentPlayer: Player3s74i, input: Omit<PlayCardTressetteInput, 'tableId'>): Card3s7 {
         if (input.card) {
-            const card = this.parseManualCard(input.card)
+            const parsed = this.parseManualCard(input.card)
+            if (!currentPlayer.hasCard(parsed)) {
+                throw new TressetteGameEngineError('CARD_NOT_OWNED', 'selected card is not owned by player', 409)
+            }
+
             try {
-                currentPlayer.playCard(card)
-                return card
+                return currentPlayer.playCardAndReturn(parsed)
             } catch (_error: unknown) {
                 throw new TressetteGameEngineError('CARD_NOT_OWNED', 'selected card is not owned by player', 409)
             }
@@ -256,6 +290,32 @@ export class TressetteGameEngineAdapter {
         }
     }
 
+    private toCurrentTrickSnapshot(session: EngineSession): TressetteCurrentTrickPlay[] {
+        return session.currentTrick.getPlaysSnapshot().map((play) => {
+            const owner = session.table.players.find((player) => player.username === play.player.username)
+            return {
+                username: play.player.username,
+                position: owner ? this.toApiPosition(owner.position) : null,
+                card: this.toPlainCard(play.card)
+            }
+        })
+    }
+
+    private toApiPosition(position: Position3s74i): TressettePosition {
+        switch (position) {
+            case Position3s74i.Sud:
+                return 'SUD'
+            case Position3s74i.Nord:
+                return 'NORD'
+            case Position3s74i.Est:
+                return 'EST'
+            case Position3s74i.Ovest:
+                return 'OVEST'
+            default:
+                return 'SUD'
+        }
+    }
+
     private nextTurnIndex(session: EngineSession, currentTurnIndex: number): number {
         const currentPlayer = session.table.players[currentTurnIndex]
         if (!currentPlayer) {
@@ -286,5 +346,3 @@ export class TressetteGameEngineAdapter {
 }
 
 export const tressetteGameEngineAdapter = new TressetteGameEngineAdapter()
-
-

@@ -48,6 +48,12 @@ export type TressetteCard = {
     value: number
 }
 
+export type TressetteCurrentTrickPlay = {
+    username: string
+    position: TressettePosition | null
+    card: TressetteCard
+}
+
 export type TressettePlayCardSource = 'manual' | 'timeout_auto'
 
 export type PlayCardTressetteInput = {
@@ -76,6 +82,7 @@ export type TressettePlayCardOutcome = {
     username: string
     card: TressetteCard
     source: TressettePlayCardSource
+    currentTrick: TressetteCurrentTrickPlay[]
     nextTurn: TressetteTurnState | null
     trickEnded: TressetteTrickEnded | null
     handEnded: boolean

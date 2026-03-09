@@ -38,6 +38,54 @@ describe('Tressette engine integration', () => {
         })
     })
 
+    test('deal gives exactly 10 cards per player at start', () => {
+        const { tableId, started } = setupStartedTable()
+
+        started.players.forEach((player) => {
+            const hand = tressetteTableStore.getPlayerHand(tableId, player.username)
+            expect(hand).toHaveLength(10)
+        })
+    })
+
+    test('manual play removes selected card from player hand', () => {
+        const { tableId } = setupStartedTable()
+
+        const handBefore = tressetteTableStore.getPlayerHand(tableId, 'Pierpaolo')
+        const selectedCard = handBefore[0]
+
+        const result = tressetteTableStore.playCard({
+            tableId,
+            username: 'Pierpaolo',
+            source: 'manual',
+            card: selectedCard
+        })
+
+        const handAfter = tressetteTableStore.getPlayerHand(tableId, 'Pierpaolo')
+        expect(handAfter).toHaveLength(handBefore.length - 1)
+        expect(handAfter.some((card) => card.suit === selectedCard.suit && card.value === selectedCard.value)).toBe(false)
+        expect(result.play.card).toEqual(selectedCard)
+        expect(result.play.currentTrick).toHaveLength(1)
+    })
+
+    test('manual card not in player hand returns CARD_NOT_OWNED', () => {
+        const { tableId } = setupStartedTable()
+        const cardOwnedByOtherPlayer = tressetteTableStore.getPlayerHand(tableId, 'Vito')[0]
+
+        try {
+            tressetteTableStore.playCard({
+                tableId,
+                username: 'Pierpaolo',
+                source: 'manual',
+                card: cardOwnedByOtherPlayer
+            })
+            fail('expected playCard to throw CARD_NOT_OWNED')
+        } catch (error: unknown) {
+            expect(error).toBeInstanceOf(TressetteStoreError)
+            const typedError = error as TressetteStoreError
+            expect(typedError.code).toBe('CARD_NOT_OWNED')
+        }
+    })
+
     test('playCard happy path delegates to engine and advances turn order', () => {
         const { tableId } = setupStartedTable()
 
@@ -73,7 +121,7 @@ describe('Tressette engine integration', () => {
         )
     })
 
-    test('four plays close trick and return trick outcome', () => {
+    test('four plays close trick and reset currentTrick', () => {
         const { tableId } = setupStartedTable()
 
         tressetteTableStore.playCard({ tableId, username: 'Pierpaolo', source: 'manual' })
@@ -90,6 +138,8 @@ describe('Tressette engine integration', () => {
                 scoreEO: expect.any(Number)
             })
         )
+        expect(fourthPlay.play.currentTrick).toEqual([])
+        expect(tressetteTableStore.getCurrentTrick(tableId)).toEqual([])
         expect(fourthPlay.play.nextTurn).toEqual(
             expect.objectContaining({
                 trickNumber: 2,
@@ -129,7 +179,4 @@ describe('Tressette engine integration', () => {
         }
     })
 })
-
-
-
 

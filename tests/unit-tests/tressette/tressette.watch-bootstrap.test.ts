@@ -21,7 +21,7 @@ describe('Tressette watch-table bootstrap', () => {
             emit: jest.fn()
         }
 
-        emitWatchTableBootstrap('live', created.tableId, socket, turnDeadlines)
+        emitWatchTableBootstrap('live', created.tableId, socket, turnDeadlines, 'Pierpaolo')
 
         expect(socket.join).toHaveBeenCalledWith(`tressette:table:live:${created.tableId}`)
 
@@ -30,7 +30,8 @@ describe('Tressette watch-table bootstrap', () => {
         expect(tableUpdatedCall[1]).toEqual(expect.objectContaining({
             tableId: created.tableId,
             mode: 'live',
-            status: 'in_game'
+            status: 'in_game',
+            currentTrick: []
         }))
 
         const turnBootstrapCall = socket.emit.mock.calls.find((entry: any[]) => entry[0] === 'tressette:turn-bootstrap')
@@ -45,8 +46,11 @@ describe('Tressette watch-table bootstrap', () => {
                 position: expect.any(String)
             }),
             turnDeadlineMs: expect.any(Number),
-            secondsRemaining: expect.any(Number)
+            secondsRemaining: expect.any(Number),
+            currentTrick: [],
+            myHand: expect.any(Array)
         }))
+        expect(turnBootstrapCall[1].myHand).toHaveLength(10)
     })
 
     test('watch-table on waiting emits table-updated only', () => {
@@ -58,11 +62,12 @@ describe('Tressette watch-table bootstrap', () => {
             emit: jest.fn()
         }
 
-        emitWatchTableBootstrap('live', created.tableId, socket, new Map<string, number>())
+        emitWatchTableBootstrap('live', created.tableId, socket, new Map<string, number>(), 'Pierpaolo')
 
         const tableUpdatedCall = socket.emit.mock.calls.find((entry: any[]) => entry[0] === 'tressette:table-updated')
         expect(tableUpdatedCall).toBeDefined()
         expect(tableUpdatedCall[1].status).toBe('waiting')
+        expect(tableUpdatedCall[1].currentTrick).toEqual([])
 
         const turnBootstrapCall = socket.emit.mock.calls.find((entry: any[]) => entry[0] === 'tressette:turn-bootstrap')
         expect(turnBootstrapCall).toBeUndefined()
@@ -85,7 +90,7 @@ describe('Tressette watch-table bootstrap', () => {
                 emit: jest.fn()
             }
 
-            emitWatchTableBootstrap('live', created.tableId, socket, new Map<string, number>())
+            emitWatchTableBootstrap('live', created.tableId, socket, new Map<string, number>(), 'Pierpaolo')
 
             expect(timeoutSpy).not.toHaveBeenCalled()
             expect(intervalSpy).not.toHaveBeenCalled()

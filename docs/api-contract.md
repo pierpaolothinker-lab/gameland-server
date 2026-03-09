@@ -75,17 +75,17 @@ Client -> server:
 - `tressette:leave-table` `{ tableId, username }`
 - `tressette:start-game` `{ tableId, username }`
 - `tressette:play-card` `{ tableId, username, card? }`
-- `tressette:watch-table` `{ tableId, mode }`
+- `tressette:watch-table` `{ tableId, username? }`
 - `tressette:bootstrap-table` `{ tableId }`
 
 Server -> client:
 - `tressette:mode-selected`
-- `tressette:table-updated` (including immediate snapshot on `tressette:watch-table`)
+- `tressette:table-updated` (including immediate snapshot on `tressette:watch-table`) with `{ ...table, mode, currentTrick }`
 - `tressette:hand-started`
-- `tressette:turn-started` `{ tableId, mode, trickNumber, currentPlayer, turnDeadlineMs, secondsRemaining, timeoutSeconds }`
-- `tressette:turn-updated` `{ tableId, mode, trickNumber, currentPlayer, turnDeadlineMs, secondsRemaining, timeoutSeconds }`
-- `tressette:turn-bootstrap` `{ tableId, mode, trickNumber, currentPlayer, turnDeadlineMs, secondsRemaining, timeoutSeconds }`
-- `tressette:card-played` `{ tableId, mode, trickNumber, username, card, source }`
+- `tressette:turn-started` `{ tableId, mode, trickNumber, currentPlayer, currentTrick, myHand, turnDeadlineMs, secondsRemaining, timeoutSeconds }` (`myHand` is always `null` in room broadcast)
+- `tressette:turn-updated` `{ tableId, mode, trickNumber, currentPlayer, currentTrick, myHand, turnDeadlineMs, secondsRemaining, timeoutSeconds }` (`myHand` is always `null` in room broadcast)
+- `tressette:turn-bootstrap` `{ tableId, mode, trickNumber, currentPlayer, currentTrick, myHand, turnDeadlineMs, secondsRemaining, timeoutSeconds }` (`myHand` is populated only for the requesting `username`)
+- `tressette:card-played` `{ tableId, mode, trickNumber, username, card, source, currentTrick }`
   - `source`: `manual | timeout_auto`
 - `tressette:trick-ended` `{ tableId, mode, trickNumber, winner, trickPoints, scoreSN, scoreEO }`
 - `tressette:error`
@@ -95,7 +95,7 @@ Server -> client:
 - On timeout, server auto-plays a random playable card and emits normal play chain.
 
 ### Bootstrap rule
-If `tressette:watch-table` is requested and table is already `in_game`, backend must emit immediate `tressette:turn-bootstrap` with `{ tableId, mode, trickNumber, currentPlayer, turnDeadlineMs, secondsRemaining, timeoutSeconds }` without waiting for next action.
+If `tressette:watch-table` is requested and table is already `in_game`, backend must emit immediate `tressette:turn-bootstrap` with `{ tableId, mode, trickNumber, currentPlayer, currentTrick, myHand, turnDeadlineMs, secondsRemaining, timeoutSeconds }` without waiting for next action. `myHand` is returned only for the requesting user and never broadcast for other players.
 
 ## Table model
 - `tableId: string`
@@ -140,6 +140,7 @@ When backend changes any endpoint/payload/event:
 1. Update this file in the same PR/commit.
 2. Add a short "Contract changes" section in PR notes.
 3. Notify frontend thread with exact changed payload examples.
+
 
 
 

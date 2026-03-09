@@ -5,6 +5,8 @@ import {
     LeaveTressetteTableInput,
     PlayCardTressetteInput,
     StartTressetteGameInput,
+    TressetteCard,
+    TressetteCurrentTrickPlay,
     TressettePlayCardOutcome,
     TressetteTable,
     TressetteTableStatus,
@@ -150,6 +152,38 @@ export class TressetteTableStore {
         }
 
         return this.engineAdapter.getCurrentTurn(tableId)
+    }
+
+    getCurrentTrick(tableId: string): TressetteCurrentTrickPlay[] {
+        const table = this.requireTable(tableId)
+        if (table.status !== 'in_game') {
+            return []
+        }
+
+        try {
+            return this.engineAdapter.getCurrentTrick(tableId)
+        } catch (error: unknown) {
+            if (error instanceof TressetteGameEngineError) {
+                throw new TressetteStoreError(error.code, error.message, error.httpStatus)
+            }
+            throw new TressetteStoreError('ENGINE_PLAY_FAILED', 'unable to read current trick', 500)
+        }
+    }
+
+    getPlayerHand(tableId: string, username: string): TressetteCard[] {
+        const table = this.requireTable(tableId)
+        if (table.status !== 'in_game') {
+            return []
+        }
+
+        try {
+            return this.engineAdapter.getPlayerHand(tableId, username)
+        } catch (error: unknown) {
+            if (error instanceof TressetteGameEngineError) {
+                throw new TressetteStoreError(error.code, error.message, error.httpStatus)
+            }
+            throw new TressetteStoreError('ENGINE_PLAY_FAILED', 'unable to read player hand', 500)
+        }
     }
 
     playCard(input: PlayCardTressetteInput): TressettePlayCardStoreResult {
