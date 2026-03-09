@@ -622,6 +622,17 @@ export const createIo = (server: http.Server) => {
                 scoreEO: play.trickEnded.scoreEO
             })
         }
+        if (play.handTransition.handEnded) {
+            io.to(tableRoom(mode, table.tableId)).emit('tressette:hand-ended', {
+                tableId: table.tableId,
+                mode,
+                handNumber: play.handTransition.handNumber,
+                handScore: play.handTransition.handScore,
+                scoreSN: table.points.teamSN,
+                scoreEO: table.points.teamEO,
+                gameEnded: play.handTransition.gameEnded
+            })
+        }
 
         io.to(tableRoom(mode, table.tableId)).emit('tressette:table-updated', {
             ...table,
@@ -662,7 +673,8 @@ export const createIo = (server: http.Server) => {
         io.to(tableRoom(context.mode, table.tableId)).emit('tressette:hand-started', {
             tableId: table.tableId,
             mode: context.mode,
-            status: table.status
+            status: table.status,
+            handNumber: 1
         })
 
         const currentTurn = getStoreForMode(context.mode).getCurrentTurn(table.tableId)
@@ -863,26 +875,4 @@ export const createIo = (server: http.Server) => {
 
     return io
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 

@@ -1,6 +1,6 @@
 # Gameland API Contract
 
-Last updated: 2026-03-08
+Last updated: 2026-03-09
 Source of truth: backend (`gameland-server`)
 
 ## Purpose
@@ -82,7 +82,7 @@ Client -> server:
 Server -> client:
 - `tressette:mode-selected`
 - `tressette:table-updated` (including immediate snapshot on `tressette:watch-table`) with `{ ...table, mode, currentTrick }`
-- `tressette:hand-started`
+- `tressette:hand-started` `{ tableId, mode, status, handNumber }`
 - `tressette:turn-started` `{ tableId, mode, trickNumber, currentPlayer, currentTrick, myHand, turnDeadlineMs, secondsRemaining, timeoutSeconds }` (`myHand` is always `null` in room broadcast)
 - `tressette:turn-updated` `{ tableId, mode, trickNumber, currentPlayer, currentTrick, myHand, turnDeadlineMs, secondsRemaining, timeoutSeconds }` (`myHand` is always `null` in room broadcast)
 - `tressette:turn-bootstrap` `{ tableId, mode, trickNumber, currentPlayer, currentTrick, myHand, turnDeadlineMs, secondsRemaining, timeoutSeconds }` (`myHand` is populated only for the requesting `username`)

@@ -269,7 +269,162 @@ describe('Tressette engine integration', () => {
             })
         )
     })
+    test('hand closes after 10 tricks and immediately starts next hand with rotated opener', () => {
+        const { tableId, started } = setupStartedTable()
+        const initialTurn = tressetteTableStore.getCurrentTurn(tableId)
 
+        if (!initialTurn) {
+            throw new Error('expected current turn at hand start')
+        }
+
+        const playersByPosition = new Map(started.players.map((player) => [player.position, player.username]))
+        const openerPosition = started.players.find((player) => player.username === initialTurn.turnPlayer)?.position
+
+        if (!openerPosition) {
+            throw new Error('expected opener position in table snapshot')
+        }
+
+        const nextPositionByOrder = {
+            SUD: 'EST',
+            EST: 'NORD',
+            NORD: 'OVEST',
+            OVEST: 'SUD'
+        } as const
+
+        const expectedNextOpener = playersByPosition.get(nextPositionByOrder[openerPosition])
+        if (!expectedNextOpener) {
+            throw new Error('expected next opener from anticlockwise rotation')
+        }
+
+        let trickClosedCount = 0
+        let lastResult: ReturnType<typeof tressetteTableStore.playCard> | null = null
+
+        for (let index = 0; index < 80; index++) {
+            const turn = tressetteTableStore.getCurrentTurn(tableId)
+            if (!turn) {
+                throw new Error('expected turn while game is in progress')
+            }
+
+            const result = tressetteTableStore.playCard({
+                tableId,
+                username: turn.turnPlayer,
+                source: 'timeout_auto'
+            })
+
+            if (result.play.trickEnded) {
+                trickClosedCount += 1
+            }
+
+            if (result.play.handTransition.handEnded) {
+                lastResult = result
+                break
+            }
+        }
+
+        if (!lastResult) {
+            throw new Error('expected hand end transition within first 10 tricks')
+        }
+
+        expect(trickClosedCount).toBe(10)
+        expect(lastResult.table.status).toBe('in_game')
+        expect(lastResult.play.handTransition.handEnded).toBe(true)
+        expect(lastResult.play.handTransition.handNumber).toBe(1)
+        expect(lastResult.play.handTransition.nextHandNumber).toBe(2)
+        expect(lastResult.play.nextTurn).toEqual(
+            expect.objectContaining({
+                trickNumber: 1,
+                turnPlayer: expectedNextOpener
+            })
+        )
+
+        lastResult.table.players.forEach((player) => {
+            const hand = tressetteTableStore.getPlayerHand(tableId, player.username)
+            expect(hand).toHaveLength(10)
+        })
+    })
+
+    test('team score updates are applied at hand-end with historical floor logic', () => {
+        const { tableId } = setupStartedTable()
+
+        let rawHandSN = 0
+        let rawHandEO = 0
+        let lastResult: ReturnType<typeof tressetteTableStore.playCard> | null = null
+
+        for (let index = 0; index < 80; index++) {
+            const turn = tressetteTableStore.getCurrentTurn(tableId)
+            if (!turn) {
+                throw new Error('expected current turn while hand is running')
+            }
+
+            const result = tressetteTableStore.playCard({
+                tableId,
+                username: turn.turnPlayer,
+                source: 'timeout_auto'
+            })
+
+            if (result.play.trickEnded) {
+                if (result.play.trickEnded.winnerPosition === 'SUD' || result.play.trickEnded.winnerPosition === 'NORD') {
+                    rawHandSN += result.play.trickEnded.trickPoints
+                } else {
+                    rawHandEO += result.play.trickEnded.trickPoints
+                }
+
+                if (result.play.trickEnded.trickNumber < 10) {
+                    expect(result.play.trickEnded.scoreSN).toBe(0)
+                    expect(result.play.trickEnded.scoreEO).toBe(0)
+                }
+            }
+
+            if (result.play.handTransition.handEnded) {
+                lastResult = result
+                break
+            }
+        }
+
+        if (!lastResult || !lastResult.play.trickEnded) {
+            throw new Error('expected trick-ended payload at hand transition')
+        }
+
+        expect(lastResult.play.trickEnded.trickNumber).toBe(10)
+        expect(lastResult.play.trickEnded.scoreSN).toBe(Math.floor(rawHandSN / 3))
+        expect(lastResult.play.trickEnded.scoreEO).toBe(Math.floor(rawHandEO / 3))
+        expect(lastResult.play.handTransition.handScore).toEqual({
+            teamSN: Math.floor(rawHandSN / 3),
+            teamEO: Math.floor(rawHandEO / 3)
+        })
+    })
+
+    test('game continues across hands until final score condition is reached', () => {
+        const { tableId } = setupStartedTable()
+
+        let handEndedCount = 0
+        let status: 'waiting' | 'in_game' | 'ended' = 'in_game'
+
+        for (let index = 0; index < 2000; index++) {
+            const turn = tressetteTableStore.getCurrentTurn(tableId)
+            if (!turn) {
+                break
+            }
+
+            const result = tressetteTableStore.playCard({
+                tableId,
+                username: turn.turnPlayer,
+                source: 'timeout_auto'
+            })
+
+            if (result.play.handTransition.handEnded) {
+                handEndedCount += 1
+            }
+
+            status = result.table.status
+            if (status === 'ended') {
+                break
+            }
+        }
+
+        expect(handEndedCount).toBeGreaterThan(1)
+        expect(status).toBe('ended')
+    })
     test('anticlockwise order includes Paolo -> Marta case', () => {
         const created = tressetteTableStore.create({ owner: 'Marta' })
         tressetteTableStore.join({ tableId: created.tableId, username: 'Vito', position: 'NORD' })

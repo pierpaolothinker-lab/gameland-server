@@ -401,6 +401,68 @@ describe('Tressette start event chain', () => {
             toSpy.mockRestore()
         }
     })
+
+    test('end-of-hand emits hand-ended then hand-started for next hand', async () => {
+        const created = tressetteTableStore.create({ owner: 'Pierpaolo' })
+        tressetteTableStore.join({ tableId: created.tableId, username: 'Vito', position: 'NORD' })
+        tressetteTableStore.join({ tableId: created.tableId, username: 'Tonino', position: 'EST' })
+        tressetteTableStore.join({ tableId: created.tableId, username: 'Paolo', position: 'OVEST' })
+
+        const emitted: Array<{ event: string, payload: any }> = []
+        const scheduledCallbacks: Array<() => void> = []
+
+        const toSpy = jest.spyOn(io, 'to').mockImplementation((_room: string) => {
+            return {
+                emit: (event: string, payload: any) => {
+                    emitted.push({ event, payload })
+                }
+            } as any
+        })
+
+        const timeoutSpy = jest.spyOn(global, 'setTimeout').mockImplementation(((callback: TimerHandler) => {
+            scheduledCallbacks.push(callback as () => void)
+            return { mocked: true } as any
+        }) as typeof setTimeout)
+
+        const intervalSpy = jest.spyOn(global, 'setInterval').mockImplementation(((..._args: any[]) => {
+            return { mockedInterval: true } as any
+        }) as typeof setInterval)
+
+        try {
+            const response = await fetch(`${baseUrl}/api/tressette/tables/${created.tableId}/start?mode=live`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username: 'Pierpaolo' })
+            })
+
+            expect(response.status).toBe(200)
+
+            for (let index = 0; index < 40; index++) {
+                const callback = scheduledCallbacks[index]
+                expect(callback).toBeDefined()
+                callback()
+            }
+
+            const handEnded = emitted.find((entry) => entry.event === 'tressette:hand-ended')
+            expect(handEnded).toBeDefined()
+            expect(handEnded?.payload).toEqual(
+                expect.objectContaining({
+                    tableId: created.tableId,
+                    handNumber: 1,
+                    gameEnded: false
+                })
+            )
+
+            const handStartedEvents = emitted.filter((entry) => entry.event === 'tressette:hand-started')
+            expect(handStartedEvents.length).toBeGreaterThanOrEqual(2)
+            expect(handStartedEvents[0].payload.handNumber).toBe(1)
+            expect(handStartedEvents[1].payload.handNumber).toBe(2)
+        } finally {
+            intervalSpy.mockRestore()
+            timeoutSpy.mockRestore()
+            toSpy.mockRestore()
+        }
+    })
 })
 
 

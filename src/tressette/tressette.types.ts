@@ -78,6 +78,14 @@ export type TressetteTrickEnded = {
     scoreEO: number
 }
 
+export type TressetteHandTransition = {
+    handEnded: boolean
+    handNumber: number
+    handScore: TressetteTablePoints | null
+    nextHandNumber: number | null
+    gameEnded: boolean
+}
+
 export type TressettePlayCardOutcome = {
     tableId: string
     trickNumber: number
@@ -89,6 +97,7 @@ export type TressettePlayCardOutcome = {
     nextTurn: TressetteTurnState | null
     trickEnded: TressetteTrickEnded | null
     handEnded: boolean
+    handTransition: TressetteHandTransition
     nextStatus: TressetteTableStatus
 }
 
