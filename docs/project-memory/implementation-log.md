@@ -90,3 +90,16 @@
 - Summary: Completati fix FE/BE su stato autoritativo mano/trick, reveal 2s a fine trick, messaggio vincitore, hardening player-state privato, timeout default dev=5s/prod=20s.
 - Validation: GUI interattiva confermata; FE test/build verdi; BE test/build verdi; cleanup branch server completato.
 
+
+## 2026-03-09 10:32 - checkpoint-new-task-follow-suit-playable-guard
+- Repo: root
+- Branch: codex/dev-follow-suit-validation-be
+- Summary: Planner checkpoint new-task: avvio parallelo P1 BE follow-suit validation e P1 FE playable-cards guard (UI + backend error handling)
+- Validation: branch kickoff captured for server/app; board payload regenerated for 2-item upsert with In Progress target- Risks/Notes: Parallel FE/BE delivery requires strict contract sync on follow-suit errors and playable-card rules to avoid UX/backend drift.
+
+
+## 2026-03-09 10:36 - follow-suit-validation-be
+- Repo: server
+- Branch: codex/dev-follow-suit-validation-be
+- Summary: Enforced follow-suit validation for manual play with INVALID_SUIT_RESPONSE (409), added integration tests and updated API contract.
+- Validation: npm.cmd run build; npm.cmd test -- tests/unit-tests/tressette --runInBand; npm.cmd test -- tests/unit-tests/http/tressette.create-table.test.ts --runInBand
