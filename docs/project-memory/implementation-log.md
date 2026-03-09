@@ -103,3 +103,16 @@
 - Branch: codex/dev-follow-suit-validation-be
 - Summary: Enforced follow-suit validation for manual play with INVALID_SUIT_RESPONSE (409), added integration tests and updated API contract.
 - Validation: npm.cmd run build; npm.cmd test -- tests/unit-tests/tressette --runInBand; npm.cmd test -- tests/unit-tests/http/tressette.create-table.test.ts --runInBand
+
+## 2026-03-09 11:05 - checkpoint-task-closure-follow-suit-fe-be
+- Repo: root
+- Branch: dev
+- Summary: Task follow-suit closed: FE playable-cards guard + BE server-authoritative follow-suit validation merged to dev (app PR #4, server PR #6), GUI validated, post-merge branch cleanup completed
+- Validation: PR #4 app merged to dev; PR #6 server merged to dev; GUI validation passed; local/remote feature branches removed; both repos now main+dev only and dev aligned- Risks/Notes: No blocking risk on closed task; residual product decisions remain on observer mode and reconnect policy.
+
+
+## 2026-03-09 11:34 - scoreboard-multihand-ui-fe
+- Repo: app
+- Branch: codex/dev-multi-hand-runtime-be
+- Summary: FE gameplay: scoreboard prominente SN/EO + transizione multi-mano con hand-start/hand-end e update realtime punti; fix mapping INVALID_SUIT_RESPONSE e copertura test component su scoreboard/multihand/follow-suit
+- Validation: npm run build -- --configuration development; npm run test -- --watch=false --browsers=ChromeHeadlessNoSandbox (42 success)

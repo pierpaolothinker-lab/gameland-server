@@ -6,7 +6,7 @@ Use this template for every implementation task to keep branch governance consis
 - Repo target: `server | app | root`
 - Base branch: normally `dev`
 - Task branch required?: `yes/no`
-- Proposed task branch name: `codex/dev-<task-slug>` (or `dev-<task-slug>` where applicable)
+- Proposed task branch name: current open task branch, or `codex/dev-<task-slug>` when new branch is approved
 - Reason if no new branch is created
 
 ## Prompt skeleton
@@ -47,15 +47,15 @@ Constraints:
 
 ## Rule
 Before sending a task prompt, explicitly decide and write whether a dedicated task branch is required.
-Default: create a dedicated task branch from `dev`.
+Default: continue on the currently open task branch until task closure is validated in GUI and PR lifecycle is completed.
 
 ## Strict branch lifecycle (mandatory)
 1. Sync dev with origin/dev.
-2. Create a new task branch from dev for each new task.
-3. Implement and validate in that branch only.
-4. Open PR task-branch -> dev (never push directly to dev).
-5. Merge PR after checks pass.
-6. Delete the task branch (local + remote) immediately after merge.
+2. If there is an open task branch not yet merged, continue work on that branch.
+3. Create a new task branch from dev only when the previous task branch is closed (PR merged + branch cleanup), or if explicitly approved as an exception in governance.
+4. Implement and validate in that branch only.
+5. Open PR task-branch -> dev (never push directly to dev).
+6. Merge PR after checks pass.
+7. Delete the task branch (local + remote) immediately after merge.
 
-No branch reuse across tasks. No direct implementation on dev except integration/cleanup operations explicitly approved in governance thread.
-
+No direct implementation on dev except integration/cleanup operations explicitly approved in governance thread.
