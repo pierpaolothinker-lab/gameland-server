@@ -35,3 +35,8 @@ Prioritize architecture decisions, integration contracts, and delivery governanc
 - Repeated regressions on the same flow.
 - Release blocked by missing mandatory checks.
 - Unclear ownership between threads.
+
+## Execution invariant
+- One task = one fresh branch from dev.
+- Task branch is temporary and must be deleted after PR merge to dev.
+- Any surviving stale task branch is treated as process violation and must be triaged before new implementation starts.

@@ -58,3 +58,9 @@
 - Branch: dev-task8-engine-integration
 - Summary: Task 8 FE/BE outputs received: engine-driven start/play-card baseline implemented on dedicated branches and validated
 - Validation: FE build+30 tests OK; BE build + targeted HTTP + engine integration tests OK
+
+## 2026-03-08 21:05 - governance-branch-lifecycle-hard-rule
+- Repo: root
+- Branch: dev
+- Summary: Enforced strict branch lifecycle: fresh branch from dev per task, PR to dev, delete branch after merge
+- Validation: Docs updated in governance/prompt/contract + decisions/journal

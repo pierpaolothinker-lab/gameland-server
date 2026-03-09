@@ -46,3 +46,13 @@ Constraints:
 ## Rule
 Before sending a task prompt, explicitly decide and write whether a dedicated task branch is required.
 Default: create a dedicated task branch from `dev`.
+
+## Strict branch lifecycle (mandatory)
+1. Sync dev with origin/dev.
+2. Create a new task branch from dev for each new task.
+3. Implement and validate in that branch only.
+4. Open PR 	ask-branch -> dev.
+5. Merge PR after checks pass.
+6. Delete the task branch (local + remote) immediately after merge.
+
+No branch reuse across tasks. No direct implementation on dev except integration/cleanup operations explicitly approved in governance thread.

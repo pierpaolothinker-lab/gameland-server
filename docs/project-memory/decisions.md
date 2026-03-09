@@ -17,3 +17,9 @@
 - Decision: `docs/api-contract.md` is mandatory source of truth for FE/BE integration.
 - Rationale: avoid integration drift.
 - Impact: every relevant API/socket change updates contract in same PR.
+
+## DEC-004 - Strict ephemeral task branches
+- Date: 2026-03-08
+- Decision: Every implementation task must run on a new branch created from dev; after PR merge to dev, that branch must be deleted (local + remote).
+- Rationale: prevent branch drift, duplicate work, and stale divergences from dev.
+- Impact: no branch reuse and no lingering feature branches between tasks.

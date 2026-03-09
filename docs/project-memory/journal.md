@@ -34,3 +34,13 @@
 - [2026-03-08 04:43] Task 8 FE/BE outputs received: engine-driven start/play-card baseline implemented on dedicated branches and validated
 - Repo: root
 - Branch: dev-task8-engine-integration
+
+## 2026-03-08
+- [2026-03-08 23:55] Enforced strict branch lifecycle policy: each task uses a fresh branch from dev, merges only via PR to dev, and branch is deleted immediately after merge.
+- Repo: root
+- Branch: dev
+
+## 2026-03-08
+- [2026-03-08 21:05] Enforced strict branch lifecycle: fresh branch from dev per task, PR to dev, delete branch after merge
+- Repo: root
+- Branch: dev

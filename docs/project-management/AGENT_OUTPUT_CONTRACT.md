@@ -28,3 +28,10 @@ Use this structure in every handoff:
 
 ## Planner consumption
 Architect/Planner will reject handoffs missing required sections and request normalization.
+
+## Branch lifecycle evidence (mandatory)
+Every handoff must include:
+- base branch used for creation (dev)
+- confirmation branch was created from current origin/dev
+- PR target (dev)
+- cleanup status after merge (remote/local branch deleted)
