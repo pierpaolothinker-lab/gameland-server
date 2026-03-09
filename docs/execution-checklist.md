@@ -1,53 +1,54 @@
-﻿# Gameland - Execution Checklist (Next Step)
+# Gameland - Execution Checklist (Current Baseline)
 
 Reference blueprint: `C:\Users\ingpi\Documents\gameland\PROJECT_BLUEPRINT.md`
 Reference contract: `C:\Users\ingpi\Documents\code\gameland-server\docs\api-contract.md`
 
 ## Obiettivo immediato
-Chiudere **Task 1**: baseline config/contratto allineata e accettata da backend + frontend prima di implementare nuove feature.
+Consolidare `dev` con test interattivi stabili su lobby/gameplay realtime e chiudere i gap di bootstrap turno.
 
-## Sprint Checklist (Fase 1 -> Fase 3)
+## Sprint Checklist (Phase 1 -> Phase 3)
 
-## Fase 1 - Contract First + Tavolo base
+## Phase 1 - Contract First + Table baseline
 - [x] Blueprint architetturale creato e condiviso.
-- [x] Baseline runtime formalizzata nel contratto (`localhost:3500`, Socket.IO, path `/api/tressette/tables`).
-- [ ] Thread frontend: adeguare env locali da `3000` a `3500`.
-- [ ] Thread frontend: adeguare endpoint da `/api/tressette/table` a contratto plural `/api/tressette/tables`.
-- [ ] Thread backend: implementare `POST /api/tressette/tables`.
-- [ ] Thread backend: implementare join/leave/start/get table.
-- [ ] Aggiornare `api-contract.md` con esempi request/response reali (non planned-only).
+- [x] Baseline runtime formalizzata nel contratto.
+- [x] Frontend allineato a backend `:3500`.
+- [x] Endpoint plural allineati (`/api/tressette/tables`).
+- [x] Backend create/join/leave/start/get/list implementati.
+- [x] `api-contract.md` aggiornato con payload/error codes principali.
 
-### Gate di uscita Fase 1
-- [ ] 4 giocatori riescono a creare/join/start da API (test + verifica manuale).
-- [ ] Nessun mismatch noto su porte/path tra app e server.
+### Exit gate Phase 1
+- [x] 4 giocatori: create/join/start verificabile.
+- [x] Nessun mismatch noto su porte/path.
 
-## Fase 2 - Realtime MVP
-- [ ] Thread backend: eventi `tressette:*` su Socket.IO con room `tableId`.
-- [ ] Thread frontend: migrazione da WebSocket nativo a `socket.io-client`.
-- [ ] Error catalog condiviso e mapping FE/BE coerente.
-- [ ] Contract tests su eventi realtime principali.
+## Phase 2 - Realtime MVP
+- [x] Backend eventi `tressette:*` con room mode-aware.
+- [x] Frontend su `socket.io-client`.
+- [x] Error catalog FE/BE allineato nel contratto.
+- [x] Timeout/autoplay baseline con eventi realtime.
+- [ ] Bootstrap turno su join/reconnect gameplay pienamente affidabile.
+- [ ] Contract tests realtime end-to-end completi.
 
-### Gate di uscita Fase 2
-- [ ] Due client sincronizzati realtime sullo stesso tavolo.
-- [ ] Error path principali gestiti senza inconsistenze UI.
+### Exit gate Phase 2
+- [ ] Due client sincronizzati realtime sullo stesso tavolo (incluso bootstrap turno).
+- [ ] Nessun `Turno: --` su ingresso pagina gameplay in `in_game`.
 
-## Fase 3 - Hardening beta interno
-- [ ] Persistenza minima tavoli (Mongo + cleanup policy).
+## Phase 3 - Beta hardening
+- [ ] Persistenza minima tavoli/sessione (Mongo + cleanup policy).
 - [ ] Logging strutturato con `tableId`/`socketId`.
 - [ ] Metriche base (health, error rate, active sockets).
 - [ ] Runbook operativo minimo.
 
-### Gate di uscita Fase 3
+### Exit gate Phase 3
 - [ ] Suite test concordata verde.
 - [ ] Sessione beta interna completata con checklist scenari.
 
-## Decision log (2026-03-07)
-- Decisione: mantenere due repo separati (`gameland-server`, `gameland-app`) + contratto condiviso come source of truth.
-- Decisione: priorita' a vertical slice Tressette, niente espansione multi-game in MVP.
-- Decisione: realtime standardizzato su Socket.IO end-to-end.
-- Decisione: persistenza in-memory in MVP, Mongo nella fase hardening beta.
+## Decision log
+- `main` production-only, `dev` integration-only.
+- Ogni task su branch nuovo da `dev`, PR verso `dev`, branch eliminato post-merge.
+- Realtime standardizzato su Socket.IO end-to-end.
+- Persistenza in-memory in MVP, Mongo nella fase beta hardening.
 
-## Assunzioni aperte da chiudere
-- Strategia identita' utente (anonimo nickname vs account).
+## Open assumptions
+- Strategia identita utente (mock session -> auth reale).
 - Politica reconnect/disconnect in mano attiva.
-- Ambiente target di staging e criteri minimi SLA beta.
+- Ambiente target staging e criteri SLA beta.

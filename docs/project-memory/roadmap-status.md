@@ -7,18 +7,22 @@
   - Tressette table HTTP endpoints implemented
   - Frontend baseline integration validated
   - Lobby endpoint `GET /api/tressette/tables` implemented
-  - Frontend lobby flow (list/create/join) implemented
+  - Frontend lobby flow (list/create/join/start) implemented
+  - Demo/live mode contract aligned
 
 ## Phase 2 - Realtime MVP coherence
 - Status: In progress
 - Done:
   - Socket table lifecycle events implemented
-  - Owner start-game flow implemented (pending final pre-merge validation)
+  - Owner start-game flow implemented
+  - Engine integration in API/socket layer completed
+  - Play-card baseline connected to engine
+  - Turn timeout + autoplay chain implemented
+  - Turn order and countdown payloads aligned in contract
 - Remaining:
-  - Engine integration in API/socket layer (Task 8)
-  - Play-card event baseline connected to engine
+  - Turn bootstrap reliability in gameplay join/reconnect path (active fix)
   - Observer mode
-  - Reconnect/rejoin behavior definition
+  - Reconnect/rejoin policy finalization
 
 ## Phase 3 - Beta hardening
 - Status: Not started
@@ -32,5 +36,5 @@
 - [2026-03-08 01:03] Governance ops improved: manual memory update command introduced.
 - [2026-03-08 03:09] Task 7 outputs received; manual validation before merge started.
 - [2026-03-08 03:20] Render deployment plan documented while Task 8 execution is in progress.
-
-- [2026-03-08 04:43] Update note: Task 8 implementation complete on feature branches; pending manual validation and PR merge
+- [2026-03-08 04:43] Task 8 implementation completed on feature branches.
+- [2026-03-08 21:09] Repositories cleaned: only `main` + `dev` active (server/app).
