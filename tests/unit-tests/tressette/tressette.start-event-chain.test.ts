@@ -1,4 +1,4 @@
-﻿import 'jest'
+import 'jest'
 import { AddressInfo } from 'net'
 import { createServer, Server as HttpServer } from 'http'
 import { Server as IoServer } from 'socket.io'
@@ -450,7 +450,63 @@ describe('Tressette start event chain', () => {
             toSpy.mockRestore()
         }
     })
+    test('bot turn auto-plays after short delay and emits card-played', async () => {
+        const randomSpy = jest.spyOn(Math, 'random').mockReturnValue(0.99)
 
+        const created = tressetteTableStore.create({ owner: 'Pierpaolo' })
+        tressetteTableStore.join({ tableId: created.tableId, username: 'Vito', position: 'NORD' })
+        tressetteTableStore.join({ tableId: created.tableId, username: 'Tonino', position: 'EST' })
+        tressetteTableStore.addBot({ tableId: created.tableId, username: 'Pierpaolo', position: 'OVEST' })
+
+        const emitted: Array<{ event: string, payload: any }> = []
+        const scheduled: Array<{ callback: () => void, delay: number }> = []
+
+        const toSpy = jest.spyOn(io, 'to').mockImplementation((_room: string) => {
+            return {
+                emit: (event: string, payload: any) => {
+                    emitted.push({ event, payload })
+                }
+            } as any
+        })
+
+        const timeoutSpy = jest.spyOn(global, 'setTimeout').mockImplementation(((callback: TimerHandler, delay?: number) => {
+            scheduled.push({ callback: callback as () => void, delay: Number(delay) })
+            return { mocked: true } as any
+        }) as typeof setTimeout)
+
+        const intervalSpy = jest.spyOn(global, 'setInterval').mockImplementation(((callback: TimerHandler) => {
+            return { mockedInterval: true, callback } as any
+        }) as typeof setInterval)
+
+        try {
+            const response = await fetch(`${baseUrl}/api/tressette/tables/${created.tableId}/start?mode=live`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username: 'Pierpaolo' })
+            })
+
+            expect(response.status).toBe(200)
+            advancePregameCountdown(intervalSpy)
+
+            const firstTurnStarted = emitted.find((entry) => entry.event === 'tressette:turn-started')
+            expect(firstTurnStarted?.payload.currentPlayer.username).toBe('Bot-1')
+
+            const botDelayTask = scheduled.find((entry) => entry.delay >= 1200 && entry.delay <= 2000)
+            expect(botDelayTask).toBeDefined()
+
+            botDelayTask!.callback()
+
+            const botPlay = emitted.find((entry) => entry.event === 'tressette:card-played' && entry.payload.username === 'Bot-1')
+            expect(botPlay).toBeDefined()
+            expect(botPlay?.payload.source).toBe('timeout_auto')
+            expect(timeoutSpy).toHaveBeenCalled()
+        } finally {
+            intervalSpy.mockRestore()
+            timeoutSpy.mockRestore()
+            toSpy.mockRestore()
+            randomSpy.mockRestore()
+        }
+    })
     test('end-of-hand emits hand-ended then hand-started for next hand', async () => {
         const created = tressetteTableStore.create({ owner: 'Pierpaolo' })
         tressetteTableStore.join({ tableId: created.tableId, username: 'Vito', position: 'NORD' })
@@ -529,12 +585,4 @@ describe('Tressette start event chain', () => {
         }
     })
 })
-
-
-
-
-
-
-
-
 

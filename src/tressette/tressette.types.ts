@@ -5,6 +5,7 @@ export type TressettePosition = (typeof TRESSETTE_POSITIONS)[number]
 export type TressetteTablePlayer = {
     username: string
     position: TressettePosition
+    isBot: boolean
 }
 
 export type TressetteTablePoints = {
@@ -28,6 +29,12 @@ export type CreateTressetteTableInput = {
 }
 
 export type JoinTressetteTableInput = {
+    tableId: string
+    username: string
+    position: TressettePosition
+}
+
+export type AddBotTressetteTableInput = {
     tableId: string
     username: string
     position: TressettePosition

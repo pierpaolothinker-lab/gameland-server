@@ -49,6 +49,16 @@ This document defines the integration contract between backend (`gameland-server
 - `200` -> updated table snapshot
 - `404` -> `TABLE_NOT_FOUND`
 
+### Tressette - Add bot
+- `POST /api/tressette/tables/:tableId/add-bot`
+- Body: `{ "username": "OwnerName", "position": "NORD" }`
+- Preconditions:
+  - only owner can add bot (`FORBIDDEN_ADD_BOT`, `403`)
+  - table status must be `waiting`
+  - requested seat must be free (`POSITION_NOT_AVAILABLE`, `409`)
+- `200` -> updated table snapshot (bot seated with `isBot: true`)
+- `404` -> `TABLE_NOT_FOUND`
+
 ### Tressette - Leave table
 - `POST /api/tressette/tables/:tableId/leave`
 - Body: `{ "username": "PlayerName" }`
@@ -110,11 +120,12 @@ Server -> client:
   - production default: `20s`
   - override via env `TRESSETTE_TURN_TIMEOUT_SECONDS` (positive integer).
 - On timeout, server auto-plays a random playable card and emits normal play chain.
+- On bot turn, server auto-plays after randomized delay 1200-2000ms using the same server-authoritative play flow.
 
 ## Table model
 - `tableId: string`
 - `owner: string`
-- `players: `Array<{ username: string, position: "SUD" | "NORD" | "EST" | "OVEST" }>`
+- `players: `Array<{ username: string, position: "SUD" | "NORD" | "EST" | "OVEST", isBot: boolean }>`
 - `isComplete: boolean`
 - `points: { teamSN: number, teamEO: number }`
 - `status: "waiting" | "starting" | "in_game" | "ended"`
@@ -138,6 +149,7 @@ Server -> client:
 - `PLAYER_NOT_FOUND` (`404`)
 - `OWNER_CANNOT_LEAVE` (`409`)
 - `FORBIDDEN_START` (`403`)
+- `FORBIDDEN_ADD_BOT` (`403`)
 - `TABLE_NOT_COMPLETE` (`409`)
 - `TABLE_ALREADY_STARTED` (`409`)
 - `TABLE_NOT_JOINABLE` (`409`)
@@ -157,6 +169,4 @@ When backend changes any endpoint/payload/event:
 1. Update this file in the same PR/commit.
 2. Add a short "Contract changes" section in PR notes.
 3. Notify frontend thread with exact changed payload examples.
-
-
 

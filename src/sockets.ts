@@ -123,6 +123,9 @@ export const resolvePregameCountdownSeconds = (): number => {
     return 5
 }
 export const PREGAME_COUNTDOWN_SECONDS = resolvePregameCountdownSeconds()
+const BOT_AUTOPLAY_MIN_DELAY_MS = 1200
+const BOT_AUTOPLAY_MAX_DELAY_MS = 2000
+const getBotAutoplayDelayMs = (): number => BOT_AUTOPLAY_MIN_DELAY_MS + Math.floor(Math.random() * (BOT_AUTOPLAY_MAX_DELAY_MS - BOT_AUTOPLAY_MIN_DELAY_MS + 1))
 
 const ALLOWED_SOCKET_ORIGINS = ['http://localhost:4200', 'http://localhost:4400', 'http://localhost:8100']
 
@@ -430,6 +433,7 @@ export const createIo = (server: http.Server) => {
     const turnTimeouts = new Map<string, NodeJS.Timeout>()
     const turnTickers = new Map<string, NodeJS.Timeout>()
     const turnStartDelays = new Map<string, NodeJS.Timeout>()
+    const botAutoplayTimers = new Map<string, NodeJS.Timeout>()
     const pregameCountdowns = new Map<string, NodeJS.Timeout>()
     const turnDeadlines = new Map<string, number>()
     const lastCompletedTrickByTable = new Map<string, LastCompletedTrickMetadata>()
@@ -466,7 +470,16 @@ export const createIo = (server: http.Server) => {
         clearTimeout(existing)
         turnStartDelays.delete(key)
     }
+    const clearBotAutoplay = (mode: TressetteMode, tableId: string) => {
+        const key = turnKey(mode, tableId)
+        const existing = botAutoplayTimers.get(key)
+        if (!existing) {
+            return
+        }
 
+        clearTimeout(existing)
+        botAutoplayTimers.delete(key)
+    }
     const clearPregameCountdown = (mode: TressetteMode, tableId: string) => {
         const key = turnKey(mode, tableId)
         const existing = pregameCountdowns.get(key)
@@ -525,6 +538,7 @@ export const createIo = (server: http.Server) => {
     ) => {
         clearTurnTicker(mode, table.tableId)
         clearTurnStartDelay(mode, table.tableId)
+        clearBotAutoplay(mode, table.tableId)
 
         emitTurnUpdated(mode, table, turn, currentPlayer, turnDeadlineMs)
 
@@ -543,6 +557,7 @@ export const createIo = (server: http.Server) => {
         clearTurnTimeout(mode, table.tableId)
         clearTurnTicker(mode, table.tableId)
         clearTurnStartDelay(mode, table.tableId)
+        clearBotAutoplay(mode, table.tableId)
 
         const currentPlayer = resolveCurrentPlayer(table, turn.turnPlayer)
         const turnDeadlineMs = Date.now() + TURN_TIMEOUT_MS
@@ -575,6 +590,41 @@ export const createIo = (server: http.Server) => {
         }, TURN_TIMEOUT_MS)
 
         turnTimeouts.set(turnKey(mode, table.tableId), timeoutHandle)
+
+        if (currentPlayer?.isBot) {
+            const botPlayDelayMs = getBotAutoplayDelayMs()
+            const botHandle = setTimeout(() => {
+                botAutoplayTimers.delete(turnKey(mode, table.tableId))
+
+                if (getTableStatusSafe(mode, table.tableId) !== 'in_game') {
+                    return
+                }
+
+                const latestTurn = getStoreForMode(mode).getCurrentTurn(table.tableId)
+                if (!latestTurn) {
+                    return
+                }
+
+                if (latestTurn.turnPlayer !== turn.turnPlayer || latestTurn.trickNumber !== turn.trickNumber) {
+                    return
+                }
+
+                try {
+                    const result = getStoreForMode(mode).playCard({
+                        tableId: table.tableId,
+                        username: turn.turnPlayer,
+                        source: 'timeout_auto'
+                    })
+
+                    emitPlayFlow(mode, result)
+                } catch (error: unknown) {
+                    emitStoreErrorToRoom(io, mode, table.tableId, error)
+                }
+            }, botPlayDelayMs)
+
+            botAutoplayTimers.set(turnKey(mode, table.tableId), botHandle)
+        }
+
         return turnDeadlineMs
     }
 
@@ -584,6 +634,7 @@ export const createIo = (server: http.Server) => {
         turn: TressetteTurnState
     ) => {
         clearTurnStartDelay(mode, table.tableId)
+        clearBotAutoplay(mode, table.tableId)
 
         if (TRICK_REVEAL_MS <= 0) {
             emitTurnStarted(mode, table, turn)
@@ -622,6 +673,7 @@ export const createIo = (server: http.Server) => {
         clearTurnTimeout(mode, table.tableId)
         clearTurnTicker(mode, table.tableId)
         clearTurnStartDelay(mode, table.tableId)
+        clearBotAutoplay(mode, table.tableId)
 
         io.to(tableRoom(mode, table.tableId)).emit('tressette:card-played', {
             tableId: play.tableId,
@@ -702,6 +754,7 @@ export const createIo = (server: http.Server) => {
         clearTurnTimeout(context.mode, table.tableId)
         clearTurnTicker(context.mode, table.tableId)
         clearTurnStartDelay(context.mode, table.tableId)
+        clearBotAutoplay(context.mode, table.tableId)
         clearPregameCountdown(context.mode, table.tableId)
         turnDeadlines.delete(key)
 
@@ -965,6 +1018,4 @@ export const createIo = (server: http.Server) => {
 
     return io
 }
-
-
 

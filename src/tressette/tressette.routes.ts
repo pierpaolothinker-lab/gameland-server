@@ -77,7 +77,35 @@ tressetteRouter.post('/tables/:tableId/join', (req: Request, res: Response) => {
         return sendStoreError(res, error)
     }
 })
+tressetteRouter.post('/tables/:tableId/add-bot', (req: Request, res: Response) => {
+    const modeResolution = resolveModeFromHttp(req)
+    if (!modeResolution.isValid) {
+        return sendValidationError(res, 'mode must be demo or live')
+    }
 
+    const usernameResult = readUsernameInput(req, 'username')
+    const position = readPosition(req.body?.position)
+
+    if (usernameResult.error) {
+        return sendValidationError(res, usernameResult.error)
+    }
+
+    if (!position) {
+        return sendValidationError(res, 'position must be one of SUD,NORD,EST,OVEST')
+    }
+
+    try {
+        const table = getStoreForMode(modeResolution.mode).addBot({
+            tableId: req.params.tableId,
+            username: usernameResult.value as string,
+            position
+        })
+
+        return res.status(200).json(table)
+    } catch (error: unknown) {
+        return sendStoreError(res, error)
+    }
+})
 tressetteRouter.post('/tables/:tableId/leave', (req: Request, res: Response) => {
     const modeResolution = resolveModeFromHttp(req)
     if (!modeResolution.isValid) {
@@ -245,3 +273,4 @@ const sendStoreError = (res: Response, error: unknown) => {
         }
     })
 }
+

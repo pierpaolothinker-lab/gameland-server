@@ -40,7 +40,7 @@ describe('Tressette table HTTP API', () => {
         expect(body.status).toBe('waiting')
         expect(body.isComplete).toBe(false)
         expect(body.points).toEqual({ teamSN: 0, teamEO: 0 })
-        expect(body.players).toEqual([{ username: 'Pierpaolo', position: 'SUD' }])
+        expect(body.players).toEqual([{ username: 'Pierpaolo', position: 'SUD', isBot: false }])
     })
 
     test('returns validation error when owner is missing', async () => {
@@ -265,7 +265,68 @@ describe('Tressette table HTTP API', () => {
             process.env.NODE_ENV = previousNodeEnv
         }
     })
+    test('owner can add bot on free seat', async () => {
+        const createResponse = await fetch(`${baseUrl}/api/tressette/tables`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ owner: 'Pierpaolo' })
+        })
+        const createdTable = await createResponse.json()
 
+        const addBotResponse = await fetch(`${baseUrl}/api/tressette/tables/${createdTable.tableId}/add-bot`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: 'Pierpaolo', position: 'NORD' })
+        })
+
+        expect(addBotResponse.status).toBe(200)
+        const table = await addBotResponse.json()
+        expect(table.players).toContainEqual({ username: 'Bot-1', position: 'NORD', isBot: true })
+    })
+
+    test('non-owner cannot add bot', async () => {
+        const createResponse = await fetch(`${baseUrl}/api/tressette/tables`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ owner: 'Pierpaolo' })
+        })
+        const createdTable = await createResponse.json()
+
+        const addBotResponse = await fetch(`${baseUrl}/api/tressette/tables/${createdTable.tableId}/add-bot`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: 'Vito', position: 'NORD' })
+        })
+
+        expect(addBotResponse.status).toBe(403)
+        const body = await addBotResponse.json()
+        expect(body.error.code).toBe('FORBIDDEN_ADD_BOT')
+    })
+
+    test('bot cannot sit on occupied seat', async () => {
+        const createResponse = await fetch(`${baseUrl}/api/tressette/tables`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ owner: 'Pierpaolo' })
+        })
+        const createdTable = await createResponse.json()
+
+        await fetch(`${baseUrl}/api/tressette/tables/${createdTable.tableId}/join`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: 'Vito', position: 'NORD' })
+        })
+
+        const addBotResponse = await fetch(`${baseUrl}/api/tressette/tables/${createdTable.tableId}/add-bot`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: 'Pierpaolo', position: 'NORD' })
+        })
+
+        expect(addBotResponse.status).toBe(409)
+        const body = await addBotResponse.json()
+        expect(body.error.code).toBe('POSITION_NOT_AVAILABLE')
+    })
     test('leave removes non-owner player from waiting table', async () => {
         const createResponse = await fetch(`${baseUrl}/api/tressette/tables`, {
             method: 'POST',
@@ -289,7 +350,7 @@ describe('Tressette table HTTP API', () => {
 
         expect(leaveResponse.status).toBe(200)
         const table = await leaveResponse.json()
-        expect(table.players).toEqual([{ username: 'Pierpaolo', position: 'SUD' }])
+        expect(table.players).toEqual([{ username: 'Pierpaolo', position: 'SUD', isBot: false }])
         expect(table.isComplete).toBe(false)
     })
 
@@ -436,6 +497,4 @@ describe('Tressette table HTTP API', () => {
         })
     })
 })
-
-
 

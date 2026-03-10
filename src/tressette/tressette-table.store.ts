@@ -2,6 +2,7 @@ import { randomUUID } from 'crypto'
 import {
     CreateTressetteTableInput,
     JoinTressetteTableInput,
+    AddBotTressetteTableInput,
     LeaveTressetteTableInput,
     PlayCardTressetteInput,
     StartTressetteGameInput,
@@ -49,7 +50,7 @@ export class TressetteTableStore {
         const table: TressetteTable = {
             tableId: this.buildTableId(),
             owner: input.owner,
-            players: [{ username: input.owner, position: 'SUD' }],
+            players: [{ username: input.owner, position: 'SUD', isBot: false }],
             isComplete: false,
             points: { teamSN: 0, teamEO: 0 },
             status: 'waiting'
@@ -89,12 +90,39 @@ export class TressetteTableStore {
             throw new TressetteStoreError('POSITION_NOT_AVAILABLE', 'position is not available', 409)
         }
 
-        table.players.push({ username: input.username, position: input.position })
+        table.players.push({ username: input.username, position: input.position, isBot: false })
+        table.isComplete = table.players.length === 4
+        return this.clone(table)
+    }
+    addBot(input: AddBotTressetteTableInput): TressetteTable {
+        const table = this.requireTable(input.tableId)
+
+        if (table.owner !== input.username) {
+            throw new TressetteStoreError('FORBIDDEN_ADD_BOT', 'only owner can add bot', 403)
+        }
+
+        if (table.status !== 'waiting') {
+            throw new TressetteStoreError('TABLE_NOT_JOINABLE', 'table is not joinable', 409)
+        }
+
+        if (table.isComplete || table.players.length >= 4) {
+            throw new TressetteStoreError('TABLE_FULL', 'table is already complete', 409)
+        }
+
+        if (table.players.some((player) => player.position === input.position)) {
+            throw new TressetteStoreError('POSITION_NOT_AVAILABLE', 'position is not available', 409)
+        }
+
+        const botUsername = this.buildBotUsername(table)
+        table.players.push({
+            username: botUsername,
+            position: input.position,
+            isBot: true
+        })
         table.isComplete = table.players.length === 4
 
         return this.clone(table)
     }
-
     leave(input: LeaveTressetteTableInput): TressetteTable {
         const table = this.requireTable(input.tableId)
 
@@ -258,7 +286,14 @@ export class TressetteTableStore {
     private buildTableId(): string {
         return randomUUID()
     }
+    private buildBotUsername(table: TressetteTable): string {
+        let botIndex = 1
+        while (table.players.some((player) => player.username === `Bot-${botIndex}`)) {
+            botIndex += 1
+        }
 
+        return `Bot-${botIndex}`
+    }
     private clone(table: TressetteTable): TressetteTable {
         return {
             ...table,
@@ -284,5 +319,4 @@ export class TressetteTableStore {
 }
 
 export const tressetteTableStore = new TressetteTableStore()
-
 
