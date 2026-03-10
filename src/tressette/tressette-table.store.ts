@@ -47,6 +47,10 @@ export class TressetteTableStore {
     }
 
     create(input: CreateTressetteTableInput): TressetteTable {
+        if (this.findActiveSeat(input.owner)) {
+            throw new TressetteStoreError('USER_ALREADY_SEATED', 'user is already seated at another active table', 409)
+        }
+
         const table: TressetteTable = {
             tableId: this.buildTableId(),
             owner: input.owner,
@@ -73,6 +77,11 @@ export class TressetteTableStore {
 
     join(input: JoinTressetteTableInput): TressetteTable {
         const table = this.requireTable(input.tableId)
+
+        const activeSeat = this.findActiveSeat(input.username, input.tableId)
+        if (activeSeat) {
+            throw new TressetteStoreError('USER_ALREADY_SEATED', 'user is already seated at another active table', 409)
+        }
 
         if (table.status !== 'waiting') {
             throw new TressetteStoreError('TABLE_NOT_JOINABLE', 'table is not joinable', 409)
@@ -301,7 +310,27 @@ export class TressetteTableStore {
             points: { ...table.points }
         }
     }
+    private findActiveSeat(username: string, excludeTableId?: string): TressetteTable | null {
+        for (const table of this.tables.values()) {
+            if (excludeTableId && table.tableId === excludeTableId) {
+                continue
+            }
 
+            if (!this.isActiveStatus(table.status)) {
+                continue
+            }
+
+            if (table.players.some((player) => player.username === username)) {
+                return table
+            }
+        }
+
+        return null
+    }
+
+    private isActiveStatus(status: TressetteTableStatus): boolean {
+        return status === 'waiting' || status === 'starting' || status === 'in_game'
+    }
     private getStatusRank(status: TressetteTableStatus): number {
         switch (status) {
             case 'waiting':

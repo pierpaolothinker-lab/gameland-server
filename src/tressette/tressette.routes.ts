@@ -20,8 +20,12 @@ tressetteRouter.post('/tables', (req: Request, res: Response) => {
         return sendValidationError(res, ownerResult.error)
     }
 
-    const table = getStoreForMode(modeResolution.mode).create({ owner: ownerResult.value as string })
-    return res.status(201).json(table)
+    try {
+        const table = getStoreForMode(modeResolution.mode).create({ owner: ownerResult.value as string })
+        return res.status(201).json(table)
+    } catch (error: unknown) {
+        return sendStoreError(res, error)
+    }
 })
 
 tressetteRouter.get('/tables', (req: Request, res: Response) => {

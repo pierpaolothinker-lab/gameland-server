@@ -56,6 +56,7 @@ This document defines the integration contract between backend (`gameland-server
   - only owner can add bot (`FORBIDDEN_ADD_BOT`, `403`)
   - table status must be `waiting`
   - requested seat must be free (`POSITION_NOT_AVAILABLE`, `409`)
+  - owner belongs to the same active table (cross-table seating is blocked by `USER_ALREADY_SEATED` guard)
 - `200` -> updated table snapshot (bot seated with `isBot: true`)
 - `404` -> `TABLE_NOT_FOUND`
 
@@ -150,6 +151,7 @@ Server -> client:
 - `OWNER_CANNOT_LEAVE` (`409`)
 - `FORBIDDEN_START` (`403`)
 - `FORBIDDEN_ADD_BOT` (`403`)
+- `USER_ALREADY_SEATED` (`409`)
 - `TABLE_NOT_COMPLETE` (`409`)
 - `TABLE_ALREADY_STARTED` (`409`)
 - `TABLE_NOT_JOINABLE` (`409`)

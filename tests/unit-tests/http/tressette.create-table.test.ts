@@ -77,7 +77,24 @@ describe('Tressette table HTTP API', () => {
             }
         })
     })
+    test('create fails when owner is already seated at another active table', async () => {
+        const firstCreateResponse = await fetch(`${baseUrl}/api/tressette/tables`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ owner: 'Pierpaolo' })
+        })
+        expect(firstCreateResponse.status).toBe(201)
 
+        const secondCreateResponse = await fetch(`${baseUrl}/api/tressette/tables`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ owner: 'Pierpaolo' })
+        })
+
+        expect(secondCreateResponse.status).toBe(409)
+        const body = await secondCreateResponse.json()
+        expect(body.error.code).toBe('USER_ALREADY_SEATED')
+    })
     test('join/get/start flow works for full table', async () => {
         const createResponse = await fetch(`${baseUrl}/api/tressette/tables`, {
             method: 'POST',
@@ -104,7 +121,7 @@ describe('Tressette table HTTP API', () => {
         const joinWest = await fetch(`${baseUrl}/api/tressette/tables/${tableId}/join`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username: 'Paolo', position: 'OVEST' })
+            body: JSON.stringify({ username: 'Bruno', position: 'OVEST' })
         })
         expect(joinWest.status).toBe(200)
         const fullTable = await joinWest.json()
@@ -127,7 +144,37 @@ describe('Tressette table HTTP API', () => {
         const started = await startResponse.json()
         expect(started.status).toBe('starting')
     })
+    test('join fails when user is already seated at another active table', async () => {
+        const firstCreateResponse = await fetch(`${baseUrl}/api/tressette/tables`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ owner: 'Pierpaolo' })
+        })
+        const firstTable = await firstCreateResponse.json()
 
+        await fetch(`${baseUrl}/api/tressette/tables/${firstTable.tableId}/join`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: 'Vito', position: 'NORD' })
+        })
+
+        const secondCreateResponse = await fetch(`${baseUrl}/api/tressette/tables`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ owner: 'Carlo' })
+        })
+        const secondTable = await secondCreateResponse.json()
+
+        const joinResponse = await fetch(`${baseUrl}/api/tressette/tables/${secondTable.tableId}/join`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: 'Vito', position: 'EST' })
+        })
+
+        expect(joinResponse.status).toBe(409)
+        const body = await joinResponse.json()
+        expect(body.error.code).toBe('USER_ALREADY_SEATED')
+    })
     test('start fails when table is not complete', async () => {
         const createResponse = await fetch(`${baseUrl}/api/tressette/tables`, {
             method: 'POST',
@@ -169,7 +216,7 @@ describe('Tressette table HTTP API', () => {
         await fetch(`${baseUrl}/api/tressette/tables/${tableId}/join`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username: 'Paolo', position: 'OVEST' })
+            body: JSON.stringify({ username: 'Bruno', position: 'OVEST' })
         })
 
         const firstStart = await fetch(`${baseUrl}/api/tressette/tables/${tableId}/start`, {
@@ -429,7 +476,7 @@ describe('Tressette table HTTP API', () => {
         await fetch(`${baseUrl}/api/tressette/tables/${tableId}/join`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username: 'Paolo', position: 'OVEST' })
+            body: JSON.stringify({ username: 'Bruno', position: 'OVEST' })
         })
 
         const response = await fetch(`${baseUrl}/api/tressette/tables/${tableId}/start`, {
