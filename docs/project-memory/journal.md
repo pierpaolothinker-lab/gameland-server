@@ -107,3 +107,9 @@
 
 
 
+
+## 2026-03-09
+- [2026-03-09 22:32] E2E GUI checklist completed with 8/8 OK after pre-game countdown and card-alignment merges; baseline confirmed stable on dev for server and app.
+- Repo: root
+- Branch: dev- Risks/Notes: No blocking risk identified in current baseline.
+

@@ -137,3 +137,10 @@
 
 
 
+
+## 2026-03-09 22:32 - e2e-checklist-closure-2026-03-09
+- Repo: root
+- Branch: dev
+- Summary: E2E GUI checklist completed with 8/8 OK after pre-game countdown and card-alignment merges; baseline confirmed stable on dev for server and app.
+- Validation: Interactive GUI checklist 8/8 passed (lobby/start/countdown/turn/follow-suit/trick reveal/next turn/hand scoring/cards render).- Risks/Notes: No blocking risk identified in current baseline.
+

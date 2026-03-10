@@ -49,3 +49,5 @@
 - [2026-03-09 19:09] Update note: New P1 stream started: pre-game countdown 5s with authoritative BE countdown event/lock and FE overlay+input lock; both tracked In Progress.
 
 - [2026-03-09 20:50] Update note: Countdown pre-game shipped to dev; CI server now includes critical realtime tests; repositories returned to clean dev/main baseline.
+
+- [2026-03-09 22:32] Update note: E2E acceptance checkpoint passed: production-like gameplay baseline now stable on dev.
