@@ -53,3 +53,13 @@
 - [2026-03-09 22:32] Update note: E2E acceptance checkpoint passed: production-like gameplay baseline now stable on dev.
 
 - [2026-03-10 00:04] Update note: Opened bots stream: BE server-authoritative bot seats+auto-play and FE bot UI distinction started in parallel with dedicated task branches targeting dev.
+
+- [2026-03-10 09:31] Update note: Daily memory checkpoint: stream bot seats/autoplay ancora in progress su branch dedicati; mantenere allineamento contratto FE/BE e chiudere pending changes prima di PR.
+
+- [2026-03-10 09:31] Update note: Bots stream is in pre-merge hardening phase on dedicated FE/BE branches with board status kept In Progress.
+
+- [2026-03-10 09:31] Update note: Daily memory checkpoint completed: bot seats/autoplay stream actively evolving on task branches with additional guardrails and UI polish commits; finalize PR/merge plan and run full FE/BE validation before closure.
+
+- [2026-03-10 11:21] Update note: FE visual polish stream closed on dev: reveal 2s cleanup, seat/trick overlap fix, lobby avatar occupancy visibility, deterministic bot color variant without flicker.
+
+- [2026-03-10 11:25] Update note: BE bot seats/autoplay stream closed at board governance level; FE/BE alignment restored on Done status for bot stream.

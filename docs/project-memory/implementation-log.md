@@ -169,3 +169,68 @@
 - Branch: codex/dev-bot-seats-and-autoplay-be
 - Summary: Lobby bot UX final refinement: compact single-table cards, no seat position labels, create-table visibility guard when user already seated
 - Validation: npm.cmd run build -- --configuration development; npm.cmd run test -- --watch=false --browsers=ChromeHeadlessNoSandbox
+
+## 2026-03-10 02:13 - gameplay-ui-polish-hand-centering-avatars
+- Repo: app
+- Branch: codex/dev-bot-seats-and-autoplay-be
+- Summary: Gameplay UI polish: removed off-turn card opacity, centered hand layout, added human/bot seat avatars with dedicated bot SVG
+- Validation: npm.cmd run build -- --configuration development; npm.cmd run test -- --watch=false --browsers=ChromeHeadlessNoSandbox
+
+## 2026-03-10 09:31 - daily-memory-run-2026-03-10
+- Repo: root
+- Branch: codex/dev-bot-seats-and-autoplay-be
+- Summary: Daily memory run: raccolto stato app/server su stream bot-seats-autoplay, rilevati worktree non puliti (app UI files, server project-memory docs), snapshot+backup eseguiti.
+- Validation: git status/log raccolti su gameland-app e gameland-server; snapshot.json e backup project-memory aggiornati- Risks/Notes: Branch bot seats/autoplay ancora in corso con modifiche non committate; serve consolidamento e chiusura PR verso dev prima del prossimo merge cycle.
+
+
+## 2026-03-10 09:31 - checkpoint-pre-merge-bots-stream
+- Repo: root
+- Branch: codex/dev-bot-seats-and-autoplay-be
+- Summary: Planner checkpoint pre-merge: streams P1 bots seats+autoplay (BE) e bot UI distinction (FE) restano In Progress con branch evaluation aggiornato
+- Validation: Git snapshot FE/BE collected; payload.current.json regenerated with allowed statuses; board sync executed- Risks/Notes: Working trees FE/BE not clean; API/UI contract on bot identity + autoplay determinism still needs final alignment before PR.
+
+
+## 2026-03-10 09:31 - daily-memory-2026-03-10
+- Repo: root
+- Branch: codex/dev-bot-seats-and-autoplay-be
+- Summary: Daily memory automation: collected server/app repo state, reviewed commits since last run, and generated daily report with risks/next steps using git/docs as sources (chat unavailable in automation context).
+- Validation: State/report update only; no FE/BE validation suite executed in this automation run- Risks/Notes: Working trees are not clean (server project-memory docs modified, app UI files modified); no new automated FE/BE test execution in this run.
+
+
+## 2026-03-10 09:32 - planner-checkpoint
+- Repo: root
+- Branch: codex/dev-bot-seats-and-autoplay-be
+- Summary: Planner checkpoint run 2026-03-10 automation sync attempt with FE/BE status capture
+- Validation: status capture + sync attempt
+
+## 2026-03-10 09:37 - gameplay-lobby-visual-polish-reveal-overlap-avatar-variants
+- Repo: app
+- Branch: codex/dev-bot-seats-and-autoplay-be
+- Summary: Gameplay/lobby visual polish: hide turn visuals during trick reveal, adjust seat/trick overlap, add avatars in lobby, deterministic bot avatar color variants in lobby+gameplay
+- Validation: npm.cmd run build -- --configuration development; npm.cmd run test -- --watch=false --browsers=ChromeHeadlessNoSandbox
+
+## 2026-03-10 10:34 - gameplay-lobby-visual-polish
+- Repo: app
+- Branch: codex/dev-bot-seats-and-autoplay-be
+- Summary: Gameplay/lobby polish: turn state hidden during trick reveal, trick/seat overlap reduced, lobby occupied-seat avatars aligned with gameplay, deterministic bot avatar color variants shared between lobby/gameplay.
+- Validation: build ok; tests ok (ChromeHeadlessNoSandbox)
+
+## 2026-03-10 11:21 - task-closure-fe-visual-polish-bot-ui
+- Repo: app
+- Branch: codex/dev-bot-seats-and-autoplay-be
+- Summary: Task FE visual polish closed: bot UI lobby/gameplay merged to dev with build/tests green and GUI acceptance 4/4 confirmed
+- Validation: Branch merged codex/dev-bot-ui-lobby-gameplay-fe -> dev; build dev config OK; tests OK (62 success); GUI acceptance checklist confirmed- Risks/Notes: No immediate blocker; monitor post-merge visual consistency in future UI refactors.
+
+
+## 2026-03-10 11:25 - board-closeout-be-bots-seats-autoplay
+- Repo: server
+- Branch: codex/dev-bot-seats-and-autoplay-be
+- Summary: Governance close-out: BE bot seats/autoplay stream marked complete and aligned with FE board closure
+- Validation: Board target item identified by title+itemId; payload regenerated for status Done update via single sync run- Risks/Notes: No blocker for this close-out step; monitor bot behavior regressions in future gameplay refinements.
+
+
+## 2026-03-10 12:52 - player-avatars-pack-fe
+- Repo: app
+- Branch: codex/dev-bot-seats-and-autoplay-be
+- Summary: Added deterministic default human avatar pack (20 SVG + manifest) and integrated fallback in lobby/gameplay with unit tests and README.
+- Validation: npm.cmd run build -- --configuration development; npm.cmd run test -- --watch=false --browsers=ChromeHeadlessNoSandbox

@@ -19,3 +19,12 @@
 - During pre-game countdown, should all user actions be hard-blocked client-side and server-side, or do we allow limited non-gameplay interactions?
 
 - For bot seats/autoplay, should bot identity be fully explicit in payloads (e.g., isBot + owner metadata) for deterministic FE rendering and replay?
+
+## 2026-03-10 - Planner checkpoint pre-merge (bots stream)
+- Do we freeze a deterministic bot autoplay priority (lowest winning card vs first legal card) to make FE replay and tests stable?
+- Should API payload expose bot metadata as mandatory (`isBot`, `botSeatId`, `ownerUserId`) before FE PR, or can FE infer from `userId` prefix?
+- Is merge sequencing BE->FE mandatory for this stream, or can both PRs open in parallel with contract lock at review time?
+
+- Do we need an explicit visual regression check (screenshot baseline) for bot color variant stability and seat/trick layout on future UI changes?
+
+- Do we need a dedicated regression checklist for bot seats/autoplay behavior before future gameplay releases?

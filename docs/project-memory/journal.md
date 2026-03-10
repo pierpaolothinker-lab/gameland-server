@@ -134,3 +134,58 @@
 - [2026-03-10 01:27] Lobby bot UX final refinement: compact single-table cards, no seat position labels, create-table visibility guard when user already seated
 - Repo: app
 - Branch: codex/dev-bot-seats-and-autoplay-be
+
+## 2026-03-10
+- [2026-03-10 02:13] Gameplay UI polish: removed off-turn card opacity, centered hand layout, added human/bot seat avatars with dedicated bot SVG
+- Repo: app
+- Branch: codex/dev-bot-seats-and-autoplay-be
+
+## 2026-03-10
+- [2026-03-10 09:31] Daily memory run: raccolto stato app/server su stream bot-seats-autoplay, rilevati worktree non puliti (app UI files, server project-memory docs), snapshot+backup eseguiti.
+- Repo: root
+- Branch: codex/dev-bot-seats-and-autoplay-be- Risks/Notes: Branch bot seats/autoplay ancora in corso con modifiche non committate; serve consolidamento e chiusura PR verso dev prima del prossimo merge cycle.
+
+
+## 2026-03-10
+- [2026-03-10 09:31] Planner checkpoint pre-merge: streams P1 bots seats+autoplay (BE) e bot UI distinction (FE) restano In Progress con branch evaluation aggiornato
+- Repo: root
+- Branch: codex/dev-bot-seats-and-autoplay-be- Risks/Notes: Working trees FE/BE not clean; API/UI contract on bot identity + autoplay determinism still needs final alignment before PR.
+
+
+## 2026-03-10
+- [2026-03-10 09:31] Daily memory automation: collected server/app repo state, reviewed commits since last run, and generated daily report with risks/next steps using git/docs as sources (chat unavailable in automation context).
+- Repo: root
+- Branch: codex/dev-bot-seats-and-autoplay-be- Risks/Notes: Working trees are not clean (server project-memory docs modified, app UI files modified); no new automated FE/BE test execution in this run.
+
+
+## 2026-03-10
+- [2026-03-10 09:32] Planner checkpoint run 2026-03-10 automation sync attempt with FE/BE status capture
+- Repo: root
+- Branch: codex/dev-bot-seats-and-autoplay-be
+
+## 2026-03-10
+- [2026-03-10 09:37] Gameplay/lobby visual polish: hide turn visuals during trick reveal, adjust seat/trick overlap, add avatars in lobby, deterministic bot avatar color variants in lobby+gameplay
+- Repo: app
+- Branch: codex/dev-bot-seats-and-autoplay-be
+
+## 2026-03-10
+- [2026-03-10 10:34] Gameplay/lobby polish: turn state hidden during trick reveal, trick/seat overlap reduced, lobby occupied-seat avatars aligned with gameplay, deterministic bot avatar color variants shared between lobby/gameplay.
+- Repo: app
+- Branch: codex/dev-bot-seats-and-autoplay-be
+
+## 2026-03-10
+- [2026-03-10 11:21] Task FE visual polish closed: bot UI lobby/gameplay merged to dev with build/tests green and GUI acceptance 4/4 confirmed
+- Repo: app
+- Branch: codex/dev-bot-seats-and-autoplay-be- Risks/Notes: No immediate blocker; monitor post-merge visual consistency in future UI refactors.
+
+
+## 2026-03-10
+- [2026-03-10 11:25] Governance close-out: BE bot seats/autoplay stream marked complete and aligned with FE board closure
+- Repo: server
+- Branch: codex/dev-bot-seats-and-autoplay-be- Risks/Notes: No blocker for this close-out step; monitor bot behavior regressions in future gameplay refinements.
+
+
+## 2026-03-10
+- [2026-03-10 12:52] Added deterministic default human avatar pack (20 SVG + manifest) and integrated fallback in lobby/gameplay with unit tests and README.
+- Repo: app
+- Branch: codex/dev-bot-seats-and-autoplay-be
