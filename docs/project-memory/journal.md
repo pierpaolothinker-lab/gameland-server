@@ -113,3 +113,24 @@
 - Repo: root
 - Branch: dev- Risks/Notes: No blocking risk identified in current baseline.
 
+
+## 2026-03-10
+- [2026-03-10 00:04] Planner checkpoint new-task: avviati stream P1 su bots seats+auto-play (BE) e bot UI distinction (FE) con target PR su dev
+- Repo: root
+- Branch: codex/dev-bot-seats-and-autoplay-be- Risks/Notes: Need clear contract alignment on bot markers/ownership and autoplay behavior to prevent FE/BE mismatch.
+
+
+## 2026-03-10
+- [2026-03-10 00:42] FE lobby bot UX refined: lightweight empty-seat affordance, owner-context add-bot click, Bot label normalization in lobby/gameplay
+- Repo: app
+- Branch: codex/dev-bot-seats-and-autoplay-be
+
+## 2026-03-10
+- [2026-03-10 01:09] Refined lobby empty-seat UX: single contextual click action (join or add-bot), compact seat control, bot labels badge-only
+- Repo: app
+- Branch: codex/dev-bot-seats-and-autoplay-be
+
+## 2026-03-10
+- [2026-03-10 01:27] Lobby bot UX final refinement: compact single-table cards, no seat position labels, create-table visibility guard when user already seated
+- Repo: app
+- Branch: codex/dev-bot-seats-and-autoplay-be

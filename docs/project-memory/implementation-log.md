@@ -144,3 +144,28 @@
 - Summary: E2E GUI checklist completed with 8/8 OK after pre-game countdown and card-alignment merges; baseline confirmed stable on dev for server and app.
 - Validation: Interactive GUI checklist 8/8 passed (lobby/start/countdown/turn/follow-suit/trick reveal/next turn/hand scoring/cards render).- Risks/Notes: No blocking risk identified in current baseline.
 
+
+## 2026-03-10 00:04 - checkpoint-new-task-bots-seats-autoplay
+- Repo: root
+- Branch: codex/dev-bot-seats-and-autoplay-be
+- Summary: Planner checkpoint new-task: avviati stream P1 su bots seats+auto-play (BE) e bot UI distinction (FE) con target PR su dev
+- Validation: branch evaluation captured for server/app and payload prepared for title-based upsert with In Progress status- Risks/Notes: Need clear contract alignment on bot markers/ownership and autoplay behavior to prevent FE/BE mismatch.
+
+
+## 2026-03-10 00:42 - bot-seat-ui-lobby-gameplay-refine
+- Repo: app
+- Branch: codex/dev-bot-seats-and-autoplay-be
+- Summary: FE lobby bot UX refined: lightweight empty-seat affordance, owner-context add-bot click, Bot label normalization in lobby/gameplay
+- Validation: npm build dev OK; npm test ChromeHeadlessNoSandbox OK (59/59)
+
+## 2026-03-10 01:09 - bot-seat-ux-v2-contextual-empty-seat
+- Repo: app
+- Branch: codex/dev-bot-seats-and-autoplay-be
+- Summary: Refined lobby empty-seat UX: single contextual click action (join or add-bot), compact seat control, bot labels badge-only
+- Validation: npm.cmd run build -- --configuration development; npm.cmd run test -- --watch=false --browsers=ChromeHeadlessNoSandbox
+
+## 2026-03-10 01:27 - bot-lobby-ux-final-refinement
+- Repo: app
+- Branch: codex/dev-bot-seats-and-autoplay-be
+- Summary: Lobby bot UX final refinement: compact single-table cards, no seat position labels, create-table visibility guard when user already seated
+- Validation: npm.cmd run build -- --configuration development; npm.cmd run test -- --watch=false --browsers=ChromeHeadlessNoSandbox

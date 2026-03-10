@@ -9,16 +9,16 @@
                       },
     "items":  [
                   {
-                      "title":  "P1 BE pre-game countdown 5s (server-authoritative)",
-                      "body":  "Update summary: merged on dev; feature branch cleanup local+remote completed; GUI checklist E2E completed (8/8 OK).",
-                      "status":  "Done",
-                      "itemId":  "PVTI_lAHOD9_bg84BRI_hzgnCh_M"
+                      "title":  "P1 BE bots seats + auto-play",
+                      "body":  "Repo target: server\nBase branch: dev\nTask branch required: yes\nBranch: codex/dev-bot-seats-and-autoplay-be\nPR target: dev\nScope: bot seats management + server-authoritative auto-play flow.",
+                      "status":  "In Progress",
+                      "itemId":  "PVTI_lAHOD9_bg84BRI_hzgnDgaQ"
                   },
                   {
-                      "title":  "P1 FE pre-game overlay countdown + input lock",
-                      "body":  "Update summary: merged on dev; feature branch cleanup local+remote completed; GUI checklist E2E completed (8/8 OK).",
-                      "status":  "Done",
-                      "itemId":  "PVTI_lAHOD9_bg84BRI_hzgnCh_Q"
+                      "title":  "P1 FE bot UI distinction",
+                      "body":  "Repo target: app\nBase branch: dev\nTask branch required: yes\nBranch: codex/dev-bot-ui-lobby-gameplay-fe\nPR target: dev\nScope: explicit bot UI distinction in lobby/gameplay with coherent state rendering.",
+                      "status":  "In Progress",
+                      "itemId":  "PVTI_lAHOD9_bg84BRI_hzgnDgaY"
                   }
               ]
 }

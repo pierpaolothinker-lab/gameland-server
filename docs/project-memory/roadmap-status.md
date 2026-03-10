@@ -51,3 +51,5 @@
 - [2026-03-09 20:50] Update note: Countdown pre-game shipped to dev; CI server now includes critical realtime tests; repositories returned to clean dev/main baseline.
 
 - [2026-03-09 22:32] Update note: E2E acceptance checkpoint passed: production-like gameplay baseline now stable on dev.
+
+- [2026-03-10 00:04] Update note: Opened bots stream: BE server-authoritative bot seats+auto-play and FE bot UI distinction started in parallel with dedicated task branches targeting dev.

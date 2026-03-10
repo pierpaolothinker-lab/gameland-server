@@ -17,3 +17,5 @@
 
 
 - During pre-game countdown, should all user actions be hard-blocked client-side and server-side, or do we allow limited non-gameplay interactions?
+
+- For bot seats/autoplay, should bot identity be fully explicit in payloads (e.g., isBot + owner metadata) for deterministic FE rendering and replay?
