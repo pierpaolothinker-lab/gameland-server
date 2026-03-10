@@ -10,6 +10,7 @@ import {
     TressetteCurrentTrickPlay,
     TressettePlayCardOutcome,
     TressetteTable,
+    TressetteTablePlayer,
     TressetteTableStatus,
     TressetteTurnState
 } from './tressette.types'
@@ -311,7 +312,9 @@ export class TressetteTableStore {
         }
     }
     private findActiveSeat(username: string, excludeTableId?: string): TressetteTable | null {
-        for (const table of this.tables.values()) {
+        const tables = Array.from(this.tables.values())
+
+        for (const table of tables) {
             if (excludeTableId && table.tableId === excludeTableId) {
                 continue
             }
@@ -320,7 +323,7 @@ export class TressetteTableStore {
                 continue
             }
 
-            if (table.players.some((player) => player.username === username)) {
+            if (table.players.some((player: TressetteTablePlayer) => player.username === username)) {
                 return table
             }
         }
@@ -348,4 +351,5 @@ export class TressetteTableStore {
 }
 
 export const tressetteTableStore = new TressetteTableStore()
+
 
