@@ -94,6 +94,16 @@
 ## 2026-03-09
 - [2026-03-09 19:09] Planner checkpoint new-task: opened parallel P1 tasks for pre-game countdown 5s (BE server-authoritative + FE overlay/input lock) and prepared board upsert
 - Repo: root
-- Branch: codex/dev-pregame-countdown-be- Risks/Notes: Requires strict FE/BE contract alignment for countdown events and play-card lock errors to prevent race conditions at game start.
+- Branch: codex/dev-pregame-countdown-be
+- Risks/Notes: Requires strict FE/BE contract alignment for countdown events and play-card lock errors to prevent race conditions at game start.
+
+
+
+## 2026-03-09
+- [2026-03-09 20:50] Post-merge consolidation completed: pregame countdown feature merged (BE+FE), CI Step A merged on server, both repos cleaned to dev/main only, and branch/docs hygiene policy reinforced.
+- Repo: root
+- Branch: dev
+- Risks/Notes: No blocking risk; remaining work is card sprite alignment fix on FE branch.
+
 
 

@@ -127,3 +127,13 @@
 - Risks/Notes: Requires strict FE/BE contract alignment for countdown events and play-card lock errors to prevent race conditions at game start.
 
 
+
+## 2026-03-09 20:50 - post-merge-consolidation-and-ci-stepA
+- Repo: root
+- Branch: dev
+- Summary: Post-merge consolidation completed: pregame countdown feature merged (BE+FE), CI Step A merged on server, both repos cleaned to dev/main only, and branch/docs hygiene policy reinforced.
+- Validation: Server CI Step A merged; FE/BE flows GUI-validated; repos aligned on dev
+- Risks/Notes: No blocking risk; remaining work is card sprite alignment fix on FE branch.
+
+
+
