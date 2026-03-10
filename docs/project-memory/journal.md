@@ -189,3 +189,33 @@
 - [2026-03-10 12:52] Added deterministic default human avatar pack (20 SVG + manifest) and integrated fallback in lobby/gameplay with unit tests and README.
 - Repo: app
 - Branch: codex/dev-bot-seats-and-autoplay-be
+
+## 2026-03-10
+- [2026-03-10 13:42] Implemented FE mock auth flow LOGIN -> GAME SELECT -> TRESSETTE LOBBY with route guard, session persistence, login form validation, and updated unit tests/README.
+- Repo: app
+- Branch: codex/dev-login-mock-compat-be
+
+## 2026-03-10
+- [2026-03-10 14:02] Hardened mock auth flow with explicit login(username,password?) and deterministic logout cleanup across current+legacy keys; guard now uses isAuthenticated() and related FE tests/docs updated.
+- Repo: app
+- Branch: codex/dev-login-mock-compat-be
+
+## 2026-03-10
+- [2026-03-10 14:22] Redesigned login page UI/UX with modern split layout, refined card/input/button hierarchy, coherent social controls, responsive behavior, and visual accessibility improvements without changing login flow logic.
+- Repo: app
+- Branch: codex/dev-login-mock-compat-be
+
+## 2026-03-10
+- [2026-03-10 14:45] Extended default player avatar catalog to 40 entries (20 human + 20 animal), updated unified manifest/type metadata, deterministic hash mapping on full set, and adjusted rendering/util tests.
+- Repo: app
+- Branch: codex/dev-login-mock-compat-be
+
+## 2026-03-10
+- [2026-03-10 14:51] Replaced animal avatar pack with 20 distinct species (dog, cat, lion, tiger, panda, koala, fox, wolf, bear, deer, horse, rabbit, elephant, giraffe, monkey, owl, eagle, penguin, dolphin, turtle) while keeping mapping and file paths stable.
+- Repo: app
+- Branch: codex/dev-login-mock-compat-be
+
+## 2026-03-10
+- [2026-03-10 15:01] Added FE debug page /debug-avatars to inspect avatar manifest with human/animal grouping, section counts, warnings, responsive grid, and login footer quick link.
+- Repo: app
+- Branch: codex/dev-login-mock-compat-be

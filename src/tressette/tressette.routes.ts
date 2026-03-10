@@ -4,10 +4,9 @@ import { getStoreForMode } from './tressette-mode.store'
 import { resolveModeFromHttp } from './tressette.mode'
 import { TRESSETTE_POSITIONS, TressettePosition, TressetteTableStatus } from './tressette.types'
 import { TressetteStoreError } from './tressette-table.store'
+import { validateTressetteUsername } from './tressette-username.validation'
 
 export const tressetteRouter = Router()
-
-const USERNAME_MAX_LENGTH = 32
 
 tressetteRouter.post('/tables', (req: Request, res: Response) => {
     const modeResolution = resolveModeFromHttp(req)
@@ -81,6 +80,7 @@ tressetteRouter.post('/tables/:tableId/join', (req: Request, res: Response) => {
         return sendStoreError(res, error)
     }
 })
+
 tressetteRouter.post('/tables/:tableId/add-bot', (req: Request, res: Response) => {
     const modeResolution = resolveModeFromHttp(req)
     if (!modeResolution.isValid) {
@@ -110,21 +110,22 @@ tressetteRouter.post('/tables/:tableId/add-bot', (req: Request, res: Response) =
         return sendStoreError(res, error)
     }
 })
+
 tressetteRouter.post('/tables/:tableId/leave', (req: Request, res: Response) => {
     const modeResolution = resolveModeFromHttp(req)
     if (!modeResolution.isValid) {
         return sendValidationError(res, 'mode must be demo or live')
     }
 
-    const username = readNonEmptyString(req.body?.username)
-    if (!username) {
-        return sendValidationError(res, 'username is required')
+    const usernameResult = readUsernameInput(req, 'username')
+    if (usernameResult.error) {
+        return sendValidationError(res, usernameResult.error)
     }
 
     try {
         const table = getStoreForMode(modeResolution.mode).leave({
             tableId: req.params.tableId,
-            username
+            username: usernameResult.value as string
         })
 
         return res.status(200).json(table)
@@ -139,9 +140,9 @@ tressetteRouter.post('/tables/:tableId/start', (req: Request, res: Response) => 
         return sendValidationError(res, 'mode must be demo or live')
     }
 
-    const username = readNonEmptyString(req.body?.username)
-    if (!username) {
-        return sendValidationError(res, 'username is required')
+    const usernameResult = readUsernameInput(req, 'username')
+    if (usernameResult.error) {
+        return sendValidationError(res, usernameResult.error)
     }
 
     const store = getStoreForMode(modeResolution.mode)
@@ -150,13 +151,13 @@ tressetteRouter.post('/tables/:tableId/start', (req: Request, res: Response) => 
     try {
         const table = store.start({
             tableId: req.params.tableId,
-            username
+            username: usernameResult.value as string
         })
 
         dispatchStartPipeline({
             mode: modeResolution.mode,
             table,
-            owner: username,
+            owner: usernameResult.value as string,
             statusBefore,
             trigger: 'http'
         })
@@ -174,7 +175,7 @@ const readUsernameInput = (
     const mockHeader = req.header('x-mock-username')
 
     if (isMockUsernameOverrideEnabled() && mockHeader !== undefined) {
-        const headerValidation = validateUsernameValue(mockHeader)
+        const headerValidation = validateTressetteUsername(mockHeader)
         if (headerValidation.error) {
             return {
                 value: null,
@@ -185,7 +186,7 @@ const readUsernameInput = (
         return { value: headerValidation.value as string, error: null }
     }
 
-    const bodyValidation = validateUsernameValue(req.body?.[fieldName])
+    const bodyValidation = validateTressetteUsername(req.body?.[fieldName])
     if (bodyValidation.error) {
         return {
             value: null,
@@ -198,34 +199,8 @@ const readUsernameInput = (
     return { value: bodyValidation.value as string, error: null }
 }
 
-const validateUsernameValue = (value: unknown): { value: string | null, error: string | null } => {
-    if (typeof value !== 'string') {
-        return { value: null, error: 'is required' }
-    }
-
-    const normalized = value.trim()
-    if (normalized.length === 0) {
-        return { value: null, error: 'is required' }
-    }
-
-    if (normalized.length > USERNAME_MAX_LENGTH) {
-        return { value: null, error: `must be at most ${USERNAME_MAX_LENGTH} characters` }
-    }
-
-    return { value: normalized, error: null }
-}
-
 const isMockUsernameOverrideEnabled = (): boolean => {
     return process.env.NODE_ENV !== 'production'
-}
-
-const readNonEmptyString = (value: unknown): string | null => {
-    if (typeof value !== 'string') {
-        return null
-    }
-
-    const normalized = value.trim()
-    return normalized.length > 0 ? normalized : null
 }
 
 const readStatusBeforeStart = (
@@ -277,4 +252,3 @@ const sendStoreError = (res: Response, error: unknown) => {
         }
     })
 }
-

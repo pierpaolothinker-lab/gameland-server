@@ -234,3 +234,39 @@
 - Branch: codex/dev-bot-seats-and-autoplay-be
 - Summary: Added deterministic default human avatar pack (20 SVG + manifest) and integrated fallback in lobby/gameplay with unit tests and README.
 - Validation: npm.cmd run build -- --configuration development; npm.cmd run test -- --watch=false --browsers=ChromeHeadlessNoSandbox
+
+## 2026-03-10 13:42 - login-game-select-flow-fe
+- Repo: app
+- Branch: codex/dev-login-mock-compat-be
+- Summary: Implemented FE mock auth flow LOGIN -> GAME SELECT -> TRESSETTE LOBBY with route guard, session persistence, login form validation, and updated unit tests/README.
+- Validation: build ok; tests ok (ChromeHeadlessNoSandbox)
+
+## 2026-03-10 14:02 - harden-mock-auth-login-logout
+- Repo: app
+- Branch: codex/dev-login-mock-compat-be
+- Summary: Hardened mock auth flow with explicit login(username,password?) and deterministic logout cleanup across current+legacy keys; guard now uses isAuthenticated() and related FE tests/docs updated.
+- Validation: build ok; tests ok (ChromeHeadlessNoSandbox)
+
+## 2026-03-10 14:22 - login-ui-redesign
+- Repo: app
+- Branch: codex/dev-login-mock-compat-be
+- Summary: Redesigned login page UI/UX with modern split layout, refined card/input/button hierarchy, coherent social controls, responsive behavior, and visual accessibility improvements without changing login flow logic.
+- Validation: npm.cmd run build -- --configuration development; npm.cmd run test -- --watch=false --browsers=ChromeHeadlessNoSandbox
+
+## 2026-03-10 14:45 - player-avatars-pack-40
+- Repo: app
+- Branch: codex/dev-login-mock-compat-be
+- Summary: Extended default player avatar catalog to 40 entries (20 human + 20 animal), updated unified manifest/type metadata, deterministic hash mapping on full set, and adjusted rendering/util tests.
+- Validation: npm.cmd run build -- --configuration development; npm.cmd run test -- --watch=false --browsers=ChromeHeadlessNoSandbox
+
+## 2026-03-10 14:51 - animal-avatar-species-fix
+- Repo: app
+- Branch: codex/dev-login-mock-compat-be
+- Summary: Replaced animal avatar pack with 20 distinct species (dog, cat, lion, tiger, panda, koala, fox, wolf, bear, deer, horse, rabbit, elephant, giraffe, monkey, owl, eagle, penguin, dolphin, turtle) while keeping mapping and file paths stable.
+- Validation: npm.cmd run build -- --configuration development; npm.cmd run test -- --watch=false --browsers=ChromeHeadlessNoSandbox
+
+## 2026-03-10 15:01 - debug-avatar-catalog
+- Repo: app
+- Branch: codex/dev-login-mock-compat-be
+- Summary: Added FE debug page /debug-avatars to inspect avatar manifest with human/animal grouping, section counts, warnings, responsive grid, and login footer quick link.
+- Validation: build ok; tests ok (ChromeHeadlessNoSandbox)
