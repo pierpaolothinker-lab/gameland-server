@@ -24,6 +24,13 @@ This document defines the integration contract between backend (`gameland-server
 - Invalid explicit mode value: `400 VALIDATION_ERROR`
 - Same mode must be used consistently for HTTP and socket flows.
 
+## Mock Login Session (username-only, current phase)
+- Backend does not implement real auth/JWT/session in this phase.
+- FE must send `owner`/`username` in create/join/start/leave/play/add-bot flows.
+- Username validation (HTTP + socket): required, trimmed, non-empty, max 32 chars.
+- Validation failures return `400 VALIDATION_ERROR` (HTTP) or `tressette:error` with `VALIDATION_ERROR` (socket).
+- Password/social login fields sent by FE are ignored by backend (no side effects).
+
 ## HTTP API
 ### Health
 - `GET /health` -> `200 { "status": "ok" }`
@@ -84,8 +91,10 @@ Turn order semantics (4 Incrociato, server-authoritative):
 Client -> server:
 - `tressette:join-table` `{ tableId, username, position }`
 - `tressette:leave-table` `{ tableId, username }`
+- `tressette:add-bot` `{ tableId, username, position }`
 - `tressette:start-game` `{ tableId, username }`
 - `tressette:play-card` `{ tableId, username, card? }`
+- Username in socket commands is validated as required (except optional in `watch-table`) with max length 32.
   - Manual play must follow lead suit when player owns at least one lead-suit card (`INVALID_SUIT_RESPONSE`, `409`).
 - `tressette:watch-table` `{ tableId, username? }`
 - `tressette:bootstrap-table` `{ tableId }`
@@ -171,4 +180,5 @@ When backend changes any endpoint/payload/event:
 1. Update this file in the same PR/commit.
 2. Add a short "Contract changes" section in PR notes.
 3. Notify frontend thread with exact changed payload examples.
+
 

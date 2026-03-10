@@ -260,6 +260,53 @@ describe('Tressette table HTTP API', () => {
         })
     })
 
+    test('returns validation error when start username is only spaces', async () => {
+        const createResponse = await fetch(`${baseUrl}/api/tressette/tables`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ owner: 'Pierpaolo' })
+        })
+        const createdTable = await createResponse.json()
+
+        const response = await fetch(`${baseUrl}/api/tressette/tables/${createdTable.tableId}/start`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: '   ' })
+        })
+
+        expect(response.status).toBe(400)
+        const body = await response.json()
+        expect(body).toEqual({
+            error: {
+                code: 'VALIDATION_ERROR',
+                message: 'username is required'
+            }
+        })
+    })
+
+    test('returns validation error when leave username is too long', async () => {
+        const createResponse = await fetch(`${baseUrl}/api/tressette/tables`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ owner: 'Pierpaolo' })
+        })
+        const createdTable = await createResponse.json()
+
+        const response = await fetch(`${baseUrl}/api/tressette/tables/${createdTable.tableId}/leave`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: 'A'.repeat(33) })
+        })
+
+        expect(response.status).toBe(400)
+        const body = await response.json()
+        expect(body).toEqual({
+            error: {
+                code: 'VALIDATION_ERROR',
+                message: 'username must be at most 32 characters'
+            }
+        })
+    })
     test('x-mock-username overrides create owner in non-production', async () => {
         const previousNodeEnv = process.env.NODE_ENV
         process.env.NODE_ENV = 'development'
@@ -544,4 +591,6 @@ describe('Tressette table HTTP API', () => {
         })
     })
 })
+
+
 

@@ -13,6 +13,7 @@ import {
 import { getStoreForMode } from './tressette/tressette-mode.store'
 import { resolveModeFromSocketHandshake, TressetteMode } from './tressette/tressette.mode'
 import { registerStartPipelineDispatcher, StartPipelineContext } from './tressette/tressette-start.pipeline'
+import { validateTressetteUsername } from './tressette/tressette-username.validation'
 
 type JoinTablePayload = {
     tableId?: unknown
@@ -39,6 +40,12 @@ type PlayCardPayload = {
 type WatchTablePayload = {
     tableId?: unknown
     username?: unknown
+}
+
+type AddBotPayload = {
+    tableId?: unknown
+    username?: unknown
+    position?: unknown
 }
 
 type WatchBootstrapSocket = {
@@ -136,6 +143,18 @@ const readNonEmptyString = (value: unknown): string | null => {
 
     const normalized = value.trim()
     return normalized.length > 0 ? normalized : null
+}
+
+const readUsernameRequired = (value: unknown): { value: string | null, error: string | null } => {
+    return validateTressetteUsername(value)
+}
+
+const readUsernameOptional = (value: unknown): { value: string | null, error: string | null } => {
+    if (value === undefined || value === null) {
+        return { value: null, error: null }
+    }
+
+    return validateTressetteUsername(value)
 }
 
 const readPosition = (value: unknown): TressettePosition | null => {
@@ -858,18 +877,40 @@ export const createIo = (server: http.Server) => {
 
         socket.on('tressette:join-table', (payload: JoinTablePayload) => {
             const tableId = readNonEmptyString(payload?.tableId)
-            const username = readNonEmptyString(payload?.username)
+            const usernameValidation = readUsernameRequired(payload?.username)
             const position = readPosition(payload?.position)
 
-            if (!tableId || !username || !position) {
+            if (!tableId) {
                 socket.emit('tressette:error', {
                     error: {
                         code: 'VALIDATION_ERROR',
-                        message: 'tableId, username and position are required'
+                        message: 'tableId is required'
                     }
                 })
                 return
             }
+
+            if (usernameValidation.error) {
+                socket.emit('tressette:error', {
+                    error: {
+                        code: 'VALIDATION_ERROR',
+                        message: `username ${usernameValidation.error}`
+                    }
+                })
+                return
+            }
+
+            if (!position) {
+                socket.emit('tressette:error', {
+                    error: {
+                        code: 'VALIDATION_ERROR',
+                        message: 'position must be one of SUD,NORD,EST,OVEST'
+                    }
+                })
+                return
+            }
+
+            const username = usernameValidation.value as string
 
             try {
                 const table = store.join({ tableId, username, position })
@@ -885,9 +926,10 @@ export const createIo = (server: http.Server) => {
             }
         })
 
-        const watchTableHandler = (payload: WatchTablePayload) => {
+        socket.on('tressette:add-bot', (payload: AddBotPayload) => {
             const tableId = readNonEmptyString(payload?.tableId)
-            const username = readNonEmptyString(payload?.username)
+            const usernameValidation = readUsernameRequired(payload?.username)
+            const position = readPosition(payload?.position)
 
             if (!tableId) {
                 socket.emit('tressette:error', {
@@ -898,6 +940,68 @@ export const createIo = (server: http.Server) => {
                 })
                 return
             }
+
+            if (usernameValidation.error) {
+                socket.emit('tressette:error', {
+                    error: {
+                        code: 'VALIDATION_ERROR',
+                        message: `username ${usernameValidation.error}`
+                    }
+                })
+                return
+            }
+
+            if (!position) {
+                socket.emit('tressette:error', {
+                    error: {
+                        code: 'VALIDATION_ERROR',
+                        message: 'position must be one of SUD,NORD,EST,OVEST'
+                    }
+                })
+                return
+            }
+
+            const username = usernameValidation.value as string
+
+            try {
+                const table = store.addBot({ tableId, username, position })
+                setSocketTableUsername(socket, socketMode, tableId, username)
+                socket.join(tableRoom(socketMode, tableId))
+                io.to(tableRoom(socketMode, tableId)).emit('tressette:table-updated', {
+                    ...table,
+                    mode: socketMode,
+                    currentTrick: readCurrentTrickSafe(socketMode, tableId)
+                })
+            } catch (error: unknown) {
+                emitStoreError(socket, error)
+            }
+        })
+
+        const watchTableHandler = (payload: WatchTablePayload) => {
+            const tableId = readNonEmptyString(payload?.tableId)
+            const usernameValidation = readUsernameOptional(payload?.username)
+
+            if (!tableId) {
+                socket.emit('tressette:error', {
+                    error: {
+                        code: 'VALIDATION_ERROR',
+                        message: 'tableId is required'
+                    }
+                })
+                return
+            }
+
+            if (usernameValidation.error) {
+                socket.emit('tressette:error', {
+                    error: {
+                        code: 'VALIDATION_ERROR',
+                        message: `username ${usernameValidation.error}`
+                    }
+                })
+                return
+            }
+
+            const username = usernameValidation.value
 
             try {
                 setSocketTableUsername(socket, socketMode, tableId, username)
@@ -912,17 +1016,29 @@ export const createIo = (server: http.Server) => {
 
         socket.on('tressette:leave-table', (payload: LeaveTablePayload) => {
             const tableId = readNonEmptyString(payload?.tableId)
-            const username = readNonEmptyString(payload?.username)
+            const usernameValidation = readUsernameRequired(payload?.username)
 
-            if (!tableId || !username) {
+            if (!tableId) {
                 socket.emit('tressette:error', {
                     error: {
                         code: 'VALIDATION_ERROR',
-                        message: 'tableId and username are required'
+                        message: 'tableId is required'
                     }
                 })
                 return
             }
+
+            if (usernameValidation.error) {
+                socket.emit('tressette:error', {
+                    error: {
+                        code: 'VALIDATION_ERROR',
+                        message: `username ${usernameValidation.error}`
+                    }
+                })
+                return
+            }
+
+            const username = usernameValidation.value as string
 
             try {
                 const table = store.leave({ tableId, username })
@@ -939,18 +1055,29 @@ export const createIo = (server: http.Server) => {
 
         socket.on('tressette:start-game', (payload: StartGamePayload) => {
             const tableId = readNonEmptyString(payload?.tableId)
-            const username = readNonEmptyString(payload?.username)
+            const usernameValidation = readUsernameRequired(payload?.username)
 
-            if (!tableId || !username) {
+            if (!tableId) {
                 socket.emit('tressette:error', {
                     error: {
                         code: 'VALIDATION_ERROR',
-                        message: 'tableId and username are required'
+                        message: 'tableId is required'
                     }
                 })
                 return
             }
 
+            if (usernameValidation.error) {
+                socket.emit('tressette:error', {
+                    error: {
+                        code: 'VALIDATION_ERROR',
+                        message: `username ${usernameValidation.error}`
+                    }
+                })
+                return
+            }
+
+            const username = usernameValidation.value as string
             const statusBefore = getTableStatusSafe(socketMode, tableId)
 
             try {
@@ -974,18 +1101,29 @@ export const createIo = (server: http.Server) => {
 
         socket.on('tressette:play-card', (payload: PlayCardPayload) => {
             const tableId = readNonEmptyString(payload?.tableId)
-            const username = readNonEmptyString(payload?.username)
+            const usernameValidation = readUsernameRequired(payload?.username)
 
-            if (!tableId || !username) {
+            if (!tableId) {
                 socket.emit('tressette:error', {
                     error: {
                         code: 'VALIDATION_ERROR',
-                        message: 'tableId and username are required'
+                        message: 'tableId is required'
                     }
                 })
                 return
             }
 
+            if (usernameValidation.error) {
+                socket.emit('tressette:error', {
+                    error: {
+                        code: 'VALIDATION_ERROR',
+                        message: `username ${usernameValidation.error}`
+                    }
+                })
+                return
+            }
+
+            const username = usernameValidation.value as string
             const hasCardPayload = payload?.card !== undefined
             const card = hasCardPayload ? readCard(payload.card) : undefined
             if (hasCardPayload && !card) {
@@ -1015,7 +1153,12 @@ export const createIo = (server: http.Server) => {
             }
         })
     })
-
     return io
 }
+
+
+
+
+
+
 
