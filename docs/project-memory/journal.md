@@ -219,3 +219,20 @@
 - [2026-03-10 15:01] Added FE debug page /debug-avatars to inspect avatar manifest with human/animal grouping, section counts, warnings, responsive grid, and login footer quick link.
 - Repo: app
 - Branch: codex/dev-login-mock-compat-be
+
+## 2026-03-10
+- [2026-03-10 15:30] Closeout post-merge FE+BE login/game-select/mock-auth registrato: merge su dev completati, cleanup branch locale/remoto completato, baseline app/server su dev-main allineata
+- Repo: root
+- Branch: dev- Risks/Notes: No blocker on closure; future step is planning migration from mock-auth flow to real auth strategy.
+
+
+## 2026-03-10
+- [2026-03-10 17:21] Closeout governance completato: mobile-first hardening FE e PR template hardening già merge su dev, branch feature remoti eliminati, baseline app/server pulita su dev/main
+- Repo: root
+- Branch: dev- Risks/Notes: No blocking risk; maintain periodic review of PR template quality gates as process evolves.
+
+
+## 2026-03-10
+- [2026-03-10 20:19] Coordinator checkpoint: task mobile-first design closed, repos cleaned on app, board closeout confirmed, ready for next task.
+- Repo: server
+- Branch: dev

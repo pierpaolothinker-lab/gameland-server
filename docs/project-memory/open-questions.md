@@ -28,3 +28,7 @@
 - Do we need an explicit visual regression check (screenshot baseline) for bot color variant stability and seat/trick layout on future UI changes?
 
 - Do we need a dedicated regression checklist for bot seats/autoplay behavior before future gameplay releases?
+
+- After mock-auth closeout, what is the migration plan and cutoff criteria for moving to real auth without breaking game-select UX?
+
+- Should PR template hardening include a quarterly governance review to keep acceptance/checklist sections aligned with current delivery gates?

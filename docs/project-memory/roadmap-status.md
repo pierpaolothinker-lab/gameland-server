@@ -63,3 +63,9 @@
 - [2026-03-10 11:21] Update note: FE visual polish stream closed on dev: reveal 2s cleanup, seat/trick overlap fix, lobby avatar occupancy visibility, deterministic bot color variant without flicker.
 
 - [2026-03-10 11:25] Update note: BE bot seats/autoplay stream closed at board governance level; FE/BE alignment restored on Done status for bot stream.
+
+- [2026-03-10 15:30] Update note: Login/game-select/mock-auth stream closed after FE+BE merge to dev and branch cleanup; repositories confirmed clean and aligned on dev baseline.
+
+- [2026-03-10 17:21] Update note: Closed stream: FE mobile-first hardening + PR template hardening governance finalized post-merge with board/memory synchronization.
+
+- [2026-03-10 20:19] Update note: Baseline stabilized after mobile-first closeout; next task can start from clean repo state.

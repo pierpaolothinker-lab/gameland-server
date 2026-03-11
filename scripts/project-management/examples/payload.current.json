@@ -9,10 +9,16 @@
                       },
     "items":  [
                   {
-                      "title":  "P1 BE bots seats + auto-play",
-                      "body":  "Update summary: BE bot seats/autoplay stream closed and aligned with FE closure; board governance close-out completed with no feature-code changes in this step.",
+                      "title":  "P1 FE mobile-first hardening closeout",
+                      "body":  "Repo target: app\nBase branch: dev\nTask branch required: yes\nMerged branch: codex/dev-mobile-first-hardening-fe -\u003e dev\nPR target: dev\nUpdate summary: post-merge closeout completed; feature branch removed local+remote; repo baseline clean on dev/main.",
                       "status":  "Done",
-                      "itemId":  "PVTI_lAHOD9_bg84BRI_hzgnDgaQ"
+                      "itemId":  "PVTI_lAHOD9_bg84BRI_hzgnIjrM"
+                  },
+                  {
+                      "title":  "P1 PR template hardening closeout",
+                      "body":  "Repo target: root (governance/process)\nBase branch: dev\nTask branch required: yes\nMerged branch: codex/dev-pr-template-hardening -\u003e dev\nPR target: dev\nUpdate summary: PR template hardening merged and closeout completed; branch cleanup local+remote confirmed.",
+                      "status":  "Done",
+                      "itemId":  "PVTI_lAHOD9_bg84BRI_hzgnIjrU"
                   }
               ]
 }
