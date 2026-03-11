@@ -32,3 +32,8 @@
 - After mock-auth closeout, what is the migration plan and cutoff criteria for moving to real auth without breaking game-select UX?
 
 - Should PR template hardening include a quarterly governance review to keep acceptance/checklist sections aligned with current delivery gates?
+
+## 2026-03-11 - Planner checkpoint new-task baseline
+- Should the next P1 stream prioritize observer mode (product) or reconnect/rejoin policy hardening (technical) now that both repos are clean on dev?
+- Do we enforce a mandatory branch-evaluation checklist (dev clean, origin/dev aligned, task branch exists) before every new FE/BE handoff prompt?
+

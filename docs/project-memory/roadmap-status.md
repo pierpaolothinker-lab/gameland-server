@@ -71,3 +71,7 @@
 - [2026-03-10 20:19] Update note: Baseline stabilized after mobile-first closeout; next task can start from clean repo state.
 
 - [2026-03-11 03:20] Update note: Local baseline restored after planner cleanup: both repos are back on clean dev and ready for the next governed task start.
+
+- [2026-03-11 12:43] Update note: Baseline clean on dev for FE/BE; classify checkpoint as new-task and keep next stream selection prioritized.
+
+- [2026-03-11 12:43] Update note: Daily memory 2026-03-11 completata: baseline dev pulita su server/app, report aggiornato da fonti git/docs locali.
