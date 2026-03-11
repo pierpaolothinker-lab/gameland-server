@@ -45,6 +45,7 @@ For each cycle:
 - Do not open a new task branch while the current task branch is still open.
 - A new branch is exceptional and requires explicit governance approval.
 - Standard flow: continue current branch -> PR to dev -> merge after checks -> delete branch.
+- If changes originate from any task/sub-branch created from `dev`, remote alignment back to `dev` must happen via PR merge only, never via direct push as a shortcut.
 
 ## Task Closeout Protocol (Thread Rule)
 1. Verify the task branch is correct, pushed, and has a clean working tree.
@@ -61,3 +62,4 @@ For each cycle:
 
 ## Documentation Commit Rule
 - Planner/memory updates are part of deliverable state and must be committed (separate docs commit allowed) before PR, unless explicitly excluded by user.
+

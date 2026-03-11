@@ -27,6 +27,7 @@ Use this structure in every handoff:
 - No direct commits/pushes to `main`.
 - No direct commits/pushes to `dev` for implementation work.
 - `dev` updates are allowed only via PR merge after required GitHub checks are green.
+- If work originated on a task/sub-branch created from `dev`, it must reach `origin/dev` only through PR merge, not through direct push realignment.
 - API/socket behavior changes must update `docs/api-contract.md`.
 - Working tree must be clean at handoff.
 - Branch must be pushed before closure recommendation.
@@ -42,6 +43,7 @@ Every handoff must include:
 - PR target (dev)
 - PR url/status if present
 - confirmation no direct push to dev was performed
+- confirmation no task-branch work was realigned to `origin/dev` via direct push
 - required checks status (`PASS`) before merge
 - cleanup status after merge (remote/local branch deleted)
 
@@ -49,3 +51,4 @@ Every handoff must include:
 - Architect verifies commit/push state before proposing the PR.
 - User performs the merge to `dev`.
 - Architect verifies merge on `dev`, performs cleanup, confirms clean baseline, then prepares Planner update output.
+

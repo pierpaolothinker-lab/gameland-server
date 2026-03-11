@@ -21,6 +21,7 @@
 - Contract/docs updated when integration changes.
 - No direct push to `main`.
 - No direct implementation push to `dev` unless explicitly authorized by the user.
+- If changes were developed on a task branch created from `dev`, they must be integrated back to `dev` through PR merge only; direct push is not a valid remote-alignment path.
 - PR checklist must be completed.
 
 ## Release flow (`dev` -> `main`)
