@@ -290,3 +290,10 @@
 - Branch: dev
 - Summary: Coordinator checkpoint: task mobile-first design closed, repos cleaned on app, board closeout confirmed, ready for next task.
 - Validation: manual-check
+
+## 2026-03-11 03:20 - architect-cleanup-realignment-2026-03-11
+- Repo: root
+- Branch: dev
+- Summary: Architect cleanup completed on 2026-03-11: gameland-server was realigned from the local planner deviation back to clean dev, the temporary planner branch was removed, helper untracked docs were moved outside the repos to the code root, and both gameland-server and gameland-app are now clean on dev.
+- Validation: git status --short --branch verified clean on gameland-server and gameland-app; current branch verified as dev on both repos; no board sync executed- Risks/Notes: Approved governance payload remains draft-only outside payload.current.json and was not synced; no implementation task should start unless the next dedicated task branch is created from clean dev on both repos.
+
