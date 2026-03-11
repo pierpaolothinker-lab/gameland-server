@@ -6,6 +6,8 @@ Use this structure in every handoff:
 1. Branch and commit
 - branch name
 - commit SHA
+- branch pushed to remote (`yes/no`)
+- PR url/status if already opened
 
 2. Scope delivered
 - bullet list of implemented items
@@ -27,6 +29,7 @@ Use this structure in every handoff:
 - `dev` updates are allowed only via PR merge after required GitHub checks are green.
 - API/socket behavior changes must update `docs/api-contract.md`.
 - Working tree must be clean at handoff.
+- Branch must be pushed before closure recommendation.
 
 ## Planner consumption
 Architect/Planner will reject handoffs missing required sections and request normalization.
@@ -35,8 +38,14 @@ Architect/Planner will reject handoffs missing required sections and request nor
 Every handoff must include:
 - base branch used for creation (dev)
 - confirmation branch was created from current origin/dev
+- confirmation branch has been pushed
 - PR target (dev)
+- PR url/status if present
 - confirmation no direct push to dev was performed
 - required checks status (`PASS`) before merge
 - cleanup status after merge (remote/local branch deleted)
 
+## Closeout expectation
+- Architect verifies commit/push state before proposing the PR.
+- User performs the merge to `dev`.
+- Architect verifies merge on `dev`, performs cleanup, confirms clean baseline, then prepares Planner update output.
