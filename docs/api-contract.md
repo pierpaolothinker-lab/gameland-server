@@ -1,6 +1,6 @@
 # Gameland API Contract
 
-Last updated: 2026-03-09
+Last updated: 2026-03-12
 Source of truth: backend (`gameland-server`)
 
 ## Purpose
@@ -9,6 +9,18 @@ This document defines the integration contract between backend (`gameland-server
 ## Environments
 - Backend local base URL: `http://localhost:3500`
 - Frontend local URL: `http://localhost:4200` (legacy) and `http://localhost:4400` (current dev host)
+- Backend deploy/test base URL: public backend URL assigned by the hosting platform (for example a Render service URL)
+
+## Deploy/Test Origin Config
+- HTTP CORS allowed origins are resolved from `ALLOWED_HTTP_ORIGINS`.
+- Socket.IO allowed origins are resolved from `ALLOWED_SOCKET_ORIGINS`.
+- Both env vars accept a comma-separated list, trim spaces, ignore empty values, and deduplicate repeated origins.
+- If either env var is missing or resolves to an empty list, backend falls back to local dev origins:
+  - `http://localhost:4200`
+  - `http://localhost:4400`
+  - `http://localhost:8100`
+- Requests without an `Origin` header remain allowed for local tooling/tests.
+- For public deploy tests, FE must use the backend public base URL and backend must be configured with the corresponding FE public origin(s).
 
 ## Runtime Baseline
 - API base URL: `http://localhost:3500`
