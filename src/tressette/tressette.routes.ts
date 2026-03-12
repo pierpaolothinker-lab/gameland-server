@@ -5,6 +5,7 @@ import { resolveModeFromHttp } from './tressette.mode'
 import { TRESSETTE_POSITIONS, TressettePosition, TressetteTableStatus } from './tressette.types'
 import { TressetteStoreError } from './tressette-table.store'
 import { validateTressetteUsername } from './tressette-username.validation'
+import { dispatchLobbyRealtime } from './tressette-lobby-realtime.dispatcher'
 
 export const tressetteRouter = Router()
 
@@ -21,6 +22,12 @@ tressetteRouter.post('/tables', (req: Request, res: Response) => {
 
     try {
         const table = getStoreForMode(modeResolution.mode).create({ owner: ownerResult.value as string })
+        dispatchLobbyRealtime({
+            mode: modeResolution.mode,
+            action: 'created',
+            table,
+            username: ownerResult.value as string
+        })
         return res.status(201).json(table)
     } catch (error: unknown) {
         return sendStoreError(res, error)
@@ -74,6 +81,12 @@ tressetteRouter.post('/tables/:tableId/join', (req: Request, res: Response) => {
             username: usernameResult.value as string,
             position
         })
+        dispatchLobbyRealtime({
+            mode: modeResolution.mode,
+            action: 'join',
+            table,
+            username: usernameResult.value as string
+        })
 
         return res.status(200).json(table)
     } catch (error: unknown) {
@@ -104,6 +117,12 @@ tressetteRouter.post('/tables/:tableId/add-bot', (req: Request, res: Response) =
             username: usernameResult.value as string,
             position
         })
+        dispatchLobbyRealtime({
+            mode: modeResolution.mode,
+            action: 'add_bot',
+            table,
+            username: usernameResult.value as string
+        })
 
         return res.status(200).json(table)
     } catch (error: unknown) {
@@ -125,6 +144,12 @@ tressetteRouter.post('/tables/:tableId/leave', (req: Request, res: Response) => 
     try {
         const table = getStoreForMode(modeResolution.mode).leave({
             tableId: req.params.tableId,
+            username: usernameResult.value as string
+        })
+        dispatchLobbyRealtime({
+            mode: modeResolution.mode,
+            action: 'leave',
+            table,
             username: usernameResult.value as string
         })
 
@@ -151,6 +176,12 @@ tressetteRouter.post('/tables/:tableId/start', (req: Request, res: Response) => 
     try {
         const table = store.start({
             tableId: req.params.tableId,
+            username: usernameResult.value as string
+        })
+        dispatchLobbyRealtime({
+            mode: modeResolution.mode,
+            action: 'starting',
+            table,
             username: usernameResult.value as string
         })
 
