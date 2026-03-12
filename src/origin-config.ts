@@ -10,7 +10,11 @@ const parseAllowedOrigins = (value: string | undefined, fallback: readonly strin
         .map((origin) => origin.trim())
         .filter((origin) => origin.length > 0)
 
-    return parsed.length > 0 ? [...new Set(parsed)] : [...fallback]
+    if (parsed.length === 0) {
+        return [...fallback]
+    }
+
+    return parsed.filter((origin, index) => parsed.indexOf(origin) === index)
 }
 
 export const resolveAllowedHttpOrigins = (): string[] => {
