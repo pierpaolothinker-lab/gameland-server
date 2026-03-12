@@ -14,6 +14,7 @@ import { getStoreForMode } from './tressette/tressette-mode.store'
 import { resolveModeFromSocketHandshake, TressetteMode } from './tressette/tressette.mode'
 import { registerStartPipelineDispatcher, StartPipelineContext } from './tressette/tressette-start.pipeline'
 import { validateTressetteUsername } from './tressette/tressette-username.validation'
+import { isAllowedOrigin, resolveAllowedSocketOrigins } from './origin-config'
 
 type JoinTablePayload = {
     tableId?: unknown
@@ -133,8 +134,6 @@ export const PREGAME_COUNTDOWN_SECONDS = resolvePregameCountdownSeconds()
 const BOT_AUTOPLAY_MIN_DELAY_MS = 1200
 const BOT_AUTOPLAY_MAX_DELAY_MS = 2000
 const getBotAutoplayDelayMs = (): number => BOT_AUTOPLAY_MIN_DELAY_MS + Math.floor(Math.random() * (BOT_AUTOPLAY_MAX_DELAY_MS - BOT_AUTOPLAY_MIN_DELAY_MS + 1))
-
-const ALLOWED_SOCKET_ORIGINS = ['http://localhost:4200', 'http://localhost:4400', 'http://localhost:8100']
 
 const readNonEmptyString = (value: unknown): string | null => {
     if (typeof value !== 'string') {
@@ -431,15 +430,11 @@ const getTableStatusSafe = (mode: TressetteMode, tableId: string): 'waiting' | '
 }
 
 export const createIo = (server: http.Server) => {
+    const allowedSocketOrigins = resolveAllowedSocketOrigins()
     const io = new Server(server, {
         cors: {
             origin: (origin, callback) => {
-                if (process.env.NODE_ENV === 'production') {
-                    callback(null, false)
-                    return
-                }
-
-                if (!origin || ALLOWED_SOCKET_ORIGINS.includes(origin)) {
+                if (isAllowedOrigin(origin, allowedSocketOrigins)) {
                     callback(null, true)
                     return
                 }

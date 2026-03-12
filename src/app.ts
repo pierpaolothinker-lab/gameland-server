@@ -3,6 +3,7 @@ import bodyParse from 'body-parser';
 import cors from 'cors';
 import mongoose from 'mongoose';
 import 'dotenv/config';
+import { isAllowedOrigin, resolveAllowedHttpOrigins } from './origin-config';
 import { tressetteRouter } from './tressette/tressette.routes';
 
 class App {
@@ -24,9 +25,16 @@ class App {
     }
 
     private handleCORSErrors() {
+        const allowedOrigins = resolveAllowedHttpOrigins()
         const corsOptions: cors.CorsOptions = {
-            // Set origin into production
-            // origin: 'http://example.com',
+            origin: (origin, callback) => {
+                if (isAllowedOrigin(origin, allowedOrigins)) {
+                    callback(null, true)
+                    return
+                }
+
+                callback(new Error('CORS not allowed'))
+            },
             optionsSuccessStatus: 200
         };
         this.express.use(cors(corsOptions));
