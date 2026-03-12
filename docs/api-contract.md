@@ -101,19 +101,22 @@ Turn order semantics (4 Incrociato, server-authoritative):
 - Covered case: `Paolo -> Marta`
 
 Client -> server:
+- `tressette:watch-lobby` `{ username? }`
 - `tressette:join-table` `{ tableId, username, position }`
 - `tressette:leave-table` `{ tableId, username }`
 - `tressette:add-bot` `{ tableId, username, position }`
 - `tressette:start-game` `{ tableId, username }`
 - `tressette:play-card` `{ tableId, username, card? }`
-- Username in socket commands is validated as required (except optional in `watch-table`) with max length 32.
+- Username in socket commands is validated as required (except optional in `watch-lobby` / `watch-table`) with max length 32.
   - Manual play must follow lead suit when player owns at least one lead-suit card (`INVALID_SUIT_RESPONSE`, `409`).
 - `tressette:watch-table` `{ tableId, username? }`
 - `tressette:bootstrap-table` `{ tableId }`
 
 Server -> client:
 - `tressette:mode-selected`
+- `tressette:lobby-state` `{ mode, tables }`
 - `tressette:table-updated` (including immediate snapshot on `tressette:watch-table`) with `{ ...table, mode, currentTrick }`
+- `tressette:table-left` `{ tableId, mode, username }`
 - `tressette:game-start-countdown` `{ tableId, mode, secondsRemaining, status }` emitted at `5,4,3,2,1,0` by default (configurable)
 - `tressette:hand-started` `{ tableId, mode, status, handNumber }`
 - `tressette:turn-started` `{ tableId, mode, trickNumber, currentPlayer, currentTrick, myHand, turnDeadlineMs, secondsRemaining, timeoutSeconds }` (`myHand` is always `null` in room broadcast)
@@ -127,9 +130,21 @@ Server -> client:
 
 ### Start sequence (server-authoritative)
 1. `POST /start` returns table snapshot with `status: "starting"`.
-2. Server emits `tressette:game-start-countdown` every second (`5 -> 0` by default).
-3. At `0`, server initializes hand/engine, sets status `in_game`, then emits `tressette:table-updated`, `tressette:hand-started`, `tressette:turn-started`.
-4. Turn timeout starts only after `turn-started`.
+2. Server emits realtime lobby updates (`tressette:table-updated` + `tressette:lobby-state`) as soon as table status becomes `starting`.
+3. Server emits `tressette:game-start-countdown` every second (`5 -> 0` by default).
+4. At `0`, server initializes hand/engine, sets status `in_game`, then emits `tressette:table-updated`, `tressette:lobby-state`, `tressette:hand-started`, `tressette:turn-started`.
+5. Turn timeout starts only after `turn-started`.
+
+### Lobby realtime semantics
+- Lobby mutations are broadcast mode-wide, including when the mutation originates from HTTP endpoints.
+- Relevant mutations include: create table, join/seat, leave/stand up, add-bot, status transitions `waiting -> starting -> in_game`, and subsequent table state updates.
+- `tressette:lobby-state` is the canonical lobby snapshot for multiuser synchronization.
+- `tressette:table-updated` is also emitted mode-wide so clients can patch a single table without a full refresh.
+
+### Leave / stand-up semantics
+- `POST /leave` and `tressette:leave-table` free the seat on the server when table status is `waiting`.
+- Once leave succeeds, the user is no longer considered seated for cross-table checks.
+- Backend emits `tressette:table-updated`, `tressette:lobby-state`, and `tressette:table-left` so clients can return to lobby and clear local table bindings.
 
 ### Trick reveal window
 - After `tressette:trick-ended`, server delays next `tressette:turn-started` by a reveal window.

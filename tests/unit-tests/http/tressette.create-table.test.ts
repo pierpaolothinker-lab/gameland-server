@@ -448,6 +448,45 @@ describe('Tressette table HTTP API', () => {
         expect(table.isComplete).toBe(false)
     })
 
+    test('leave frees the seat so the same user can join another table', async () => {
+        const firstCreateResponse = await fetch(`${baseUrl}/api/tressette/tables`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ owner: 'Pierpaolo' })
+        })
+        const firstTable = await firstCreateResponse.json()
+
+        await fetch(`${baseUrl}/api/tressette/tables/${firstTable.tableId}/join`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: 'Vito', position: 'NORD' })
+        })
+
+        const leaveResponse = await fetch(`${baseUrl}/api/tressette/tables/${firstTable.tableId}/leave`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: 'Vito' })
+        })
+        expect(leaveResponse.status).toBe(200)
+
+        const secondCreateResponse = await fetch(`${baseUrl}/api/tressette/tables`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ owner: 'Carlo' })
+        })
+        const secondTable = await secondCreateResponse.json()
+
+        const secondJoinResponse = await fetch(`${baseUrl}/api/tressette/tables/${secondTable.tableId}/join`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: 'Vito', position: 'EST' })
+        })
+
+        expect(secondJoinResponse.status).toBe(200)
+        const updatedTable = await secondJoinResponse.json()
+        expect(updatedTable.players).toContainEqual({ username: 'Vito', position: 'EST', isBot: false })
+    })
+
     test('returns contract error for invalid join position', async () => {
         const createResponse = await fetch(`${baseUrl}/api/tressette/tables`, {
             method: 'POST',

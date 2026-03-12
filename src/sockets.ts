@@ -13,6 +13,10 @@ import {
 import { getStoreForMode } from './tressette/tressette-mode.store'
 import { resolveModeFromSocketHandshake, TressetteMode } from './tressette/tressette.mode'
 import { registerStartPipelineDispatcher, StartPipelineContext } from './tressette/tressette-start.pipeline'
+import {
+    registerLobbyRealtimeDispatcher,
+    TressetteLobbyRealtimeContext
+} from './tressette/tressette-lobby-realtime.dispatcher'
 import { validateTressetteUsername } from './tressette/tressette-username.validation'
 import { isAllowedOrigin, resolveAllowedSocketOrigins } from './origin-config'
 
@@ -47,6 +51,10 @@ type AddBotPayload = {
     tableId?: unknown
     username?: unknown
     position?: unknown
+}
+
+type WatchLobbyPayload = {
+    username?: unknown
 }
 
 type WatchBootstrapSocket = {
@@ -184,6 +192,7 @@ const readCard = (value: unknown): TressetteCard | null => {
     }
 }
 
+const modeRoom = (mode: TressetteMode): string => `tressette:mode:${mode}`
 const tableRoom = (mode: TressetteMode, tableId: string): string => `tressette:table:${mode}:${tableId}`
 const turnKey = (mode: TressetteMode, tableId: string): string => `${mode}:${tableId}`
 
@@ -220,16 +229,41 @@ const getSocketTableUsersMap = (socket: any): Map<string, string> => {
     return socket.data.__tressetteTableUsers as Map<string, string>
 }
 
+const getSocketModeUsersMap = (socket: any): Map<TressetteMode, string> => {
+    if (!socket.data.__tressetteModeUsers) {
+        socket.data.__tressetteModeUsers = new Map<TressetteMode, string>()
+    }
+
+    return socket.data.__tressetteModeUsers as Map<TressetteMode, string>
+}
+
+const setSocketModeUsername = (socket: any, mode: TressetteMode, username: string | null): void => {
+    if (!username) {
+        return
+    }
+
+    getSocketModeUsersMap(socket).set(mode, username)
+}
+
+const getSocketModeUsername = (socket: any, mode: TressetteMode): string | null => {
+    return getSocketModeUsersMap(socket).get(mode) ?? null
+}
+
 const setSocketTableUsername = (socket: any, mode: TressetteMode, tableId: string, username: string | null): void => {
     if (!username) {
         return
     }
 
+    setSocketModeUsername(socket, mode, username)
     getSocketTableUsersMap(socket).set(turnKey(mode, tableId), username)
 }
 
 const getSocketTableUsername = (socket: any, mode: TressetteMode, tableId: string): string | null => {
     return getSocketTableUsersMap(socket).get(turnKey(mode, tableId)) ?? null
+}
+
+const clearSocketTableUsername = (socket: any, mode: TressetteMode, tableId: string): void => {
+    getSocketTableUsersMap(socket).delete(turnKey(mode, tableId))
 }
 const buildTurnBootstrapPayload = (
     mode: TressetteMode,
@@ -451,6 +485,62 @@ export const createIo = (server: http.Server) => {
     const pregameCountdowns = new Map<string, NodeJS.Timeout>()
     const turnDeadlines = new Map<string, number>()
     const lastCompletedTrickByTable = new Map<string, LastCompletedTrickMetadata>()
+
+    const buildLobbyStatePayload = (mode: TressetteMode) => ({
+        mode,
+        tables: getStoreForMode(mode).list()
+    })
+
+    const emitLobbyState = (mode: TressetteMode) => {
+        io.to(modeRoom(mode)).emit('tressette:lobby-state', buildLobbyStatePayload(mode))
+    }
+
+    const emitModeTableUpdated = (mode: TressetteMode, table: TressetteTable) => {
+        io.to(modeRoom(mode)).emit('tressette:table-updated', {
+            ...table,
+            mode,
+            currentTrick: readCurrentTrickSafe(mode, table.tableId)
+        })
+    }
+
+    const attachKnownPlayerSocketsToTable = (mode: TressetteMode, table: TressetteTable) => {
+        io.sockets.sockets.forEach((roomSocket) => {
+            const username = getSocketModeUsername(roomSocket, mode)
+            if (!username || !table.players.some((player) => player.username === username)) {
+                return
+            }
+
+            setSocketTableUsername(roomSocket, mode, table.tableId, username)
+            roomSocket.join(tableRoom(mode, table.tableId))
+        })
+    }
+
+    const releaseKnownPlayerSocketsFromTable = (mode: TressetteMode, tableId: string, username: string) => {
+        io.sockets.sockets.forEach((roomSocket) => {
+            const modeUsername = getSocketModeUsername(roomSocket, mode)
+            const tableUsername = getSocketTableUsername(roomSocket, mode, tableId)
+            if (modeUsername !== username && tableUsername !== username) {
+                return
+            }
+
+            clearSocketTableUsername(roomSocket, mode, tableId)
+            roomSocket.leave(tableRoom(mode, tableId))
+            roomSocket.emit('tressette:table-left', { tableId, mode, username })
+        })
+    }
+
+    const emitLobbyRealtime = (context: TressetteLobbyRealtimeContext) => {
+        if (context.action === 'leave' && context.username) {
+            releaseKnownPlayerSocketsFromTable(context.mode, context.table.tableId, context.username)
+        }
+
+        if (context.action === 'starting' || context.action === 'in_game') {
+            attachKnownPlayerSocketsToTable(context.mode, context.table)
+        }
+
+        emitModeTableUpdated(context.mode, context.table)
+        emitLobbyState(context.mode)
+    }
 
     const clearTurnTimeout = (mode: TressetteMode, tableId: string) => {
         const key = turnKey(mode, tableId)
@@ -738,6 +828,8 @@ export const createIo = (server: http.Server) => {
             mode,
             currentTrick: readCurrentTrickSafe(mode, table.tableId)
         })
+        emitModeTableUpdated(mode, table)
+        emitLobbyState(mode)
 
         if (play.trickEnded) {
             lastCompletedTrickByTable.set(turnKey(mode, table.tableId), {
@@ -788,6 +880,13 @@ export const createIo = (server: http.Server) => {
                 emitStoreErrorToRoom(io, context.mode, table.tableId, error)
                 return
             }
+
+            emitLobbyRealtime({
+                mode: context.mode,
+                action: 'in_game',
+                table: startedTable,
+                username: context.owner
+            })
 
             io.to(tableRoom(context.mode, startedTable.tableId)).emit('tressette:table-updated', {
                 ...startedTable,
@@ -845,15 +944,19 @@ export const createIo = (server: http.Server) => {
     }
 
     registerStartPipelineDispatcher(emitStartPipeline)
+    registerLobbyRealtimeDispatcher(emitLobbyRealtime)
 
     io.on('connection', (socket) => {
         const socketMode = resolveModeFromSocketHandshake(socket.handshake)
         const store = getStoreForMode(socketMode)
 
+        socket.join(modeRoom(socketMode))
+
         console.log(`User ${socket.id} connected`)
 
         socket.emit('message', 'Welcome to Game Land!')
         socket.emit('tressette:mode-selected', { mode: socketMode })
+        socket.emit('tressette:lobby-state', buildLobbyStatePayload(socketMode))
         socket.broadcast.emit('message', `${socket.id.substring(0, 5)} si e\' connesso!`)
 
         socket.on('message', (data) => {
@@ -868,6 +971,28 @@ export const createIo = (server: http.Server) => {
         socket.on('activity', (name) => {
             console.log('activity', name)
             socket.broadcast.emit('activity', name)
+        })
+
+        socket.on('tressette:watch-lobby', (payload: WatchLobbyPayload = {}) => {
+            const usernameValidation = readUsernameOptional(payload?.username)
+
+            if (usernameValidation.error) {
+                socket.emit('tressette:error', {
+                    error: {
+                        code: 'VALIDATION_ERROR',
+                        message: `username ${usernameValidation.error}`
+                    }
+                })
+                return
+            }
+
+            const username = usernameValidation.value
+            if (username) {
+                setSocketModeUsername(socket, socketMode, username)
+            }
+
+            socket.join(modeRoom(socketMode))
+            socket.emit('tressette:lobby-state', buildLobbyStatePayload(socketMode))
         })
 
         socket.on('tressette:join-table', (payload: JoinTablePayload) => {
@@ -911,10 +1036,11 @@ export const createIo = (server: http.Server) => {
                 const table = store.join({ tableId, username, position })
                 setSocketTableUsername(socket, socketMode, tableId, username)
                 socket.join(tableRoom(socketMode, tableId))
-                io.to(tableRoom(socketMode, tableId)).emit('tressette:table-updated', {
-                    ...table,
+                emitLobbyRealtime({
                     mode: socketMode,
-                    currentTrick: readCurrentTrickSafe(socketMode, tableId)
+                    action: 'join',
+                    table,
+                    username
                 })
             } catch (error: unknown) {
                 emitStoreError(socket, error)
@@ -962,10 +1088,11 @@ export const createIo = (server: http.Server) => {
                 const table = store.addBot({ tableId, username, position })
                 setSocketTableUsername(socket, socketMode, tableId, username)
                 socket.join(tableRoom(socketMode, tableId))
-                io.to(tableRoom(socketMode, tableId)).emit('tressette:table-updated', {
-                    ...table,
+                emitLobbyRealtime({
                     mode: socketMode,
-                    currentTrick: readCurrentTrickSafe(socketMode, tableId)
+                    action: 'add_bot',
+                    table,
+                    username
                 })
             } catch (error: unknown) {
                 emitStoreError(socket, error)
@@ -1037,11 +1164,13 @@ export const createIo = (server: http.Server) => {
 
             try {
                 const table = store.leave({ tableId, username })
-                io.to(tableRoom(socketMode, tableId)).emit('tressette:table-updated', {
-                    ...table,
+                emitLobbyRealtime({
                     mode: socketMode,
-                    currentTrick: readCurrentTrickSafe(socketMode, tableId)
+                    action: 'leave',
+                    table,
+                    username
                 })
+                clearSocketTableUsername(socket, socketMode, tableId)
                 socket.leave(tableRoom(socketMode, tableId))
             } catch (error: unknown) {
                 emitStoreError(socket, error)
@@ -1079,6 +1208,12 @@ export const createIo = (server: http.Server) => {
                 const table = store.start({ tableId, username })
                 setSocketTableUsername(socket, socketMode, tableId, username)
                 socket.join(tableRoom(socketMode, tableId))
+                emitLobbyRealtime({
+                    mode: socketMode,
+                    action: 'starting',
+                    table,
+                    username
+                })
 
                 emitStartPipeline({
                     mode: socketMode,
